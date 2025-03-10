@@ -24,11 +24,25 @@ def load_email_files():
 def generate_random_pairs():
     # Load email files
     emails = load_email_files()
+
+    # Check if we have enough unique emails
+    if len(emails) < 2:
+        raise ValueError("Not enough unique email files to create pairs")
+
     pairs = []
-    for _ in range(NUM_PAIRS):
+    used_pairs = set()  # Keep track of pairs we've already used
+
+    while len(pairs) < NUM_PAIRS:
         # Randomly select two distinct emails from the list
         pair = random.sample(emails, 2)
-        pairs.append(pair)
+        pair_tuple = tuple(pair)
+        reverse_pair = tuple(reversed(pair))
+
+        # Ensure we haven't used this pair before (in either order)
+        if pair_tuple not in used_pairs and reverse_pair not in used_pairs:
+            pairs.append(pair)
+            used_pairs.add(pair_tuple)
+
     return pairs
 
 
