@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Demographics</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+  <header>
+    <h1>Email Trustworthiness Survey</h1>
+  </header>
+  <div class="demographics-container">
+    <div class="selection-area">
+      <h2>Demographics</h2>
+      <form action="{{ url_for('demographics') }}" method="post">
+        <div class="form-group">
+          <label for="age">Age Range:</label>
+          <select name="age" id="age" required>
+            <option value="" disabled selected>Select your age range</option>
+            <option value="18-24">18-24 years</option>
+            <option value="25-34">25-34 years</option>
+            <option value="35-44">35-44 years</option>
+            <option value="45-54">45-54 years</option>
+            <option value="55-64">55-64 years</option>
+            <option value="65+">65 years or older</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="tech_experience">Technical Experience:</label>
+          <select name="tech_experience" id="tech_experience" required>
+            <option value="" disabled selected>Select your level</option>
+            <option value="beginner">Beginner</option>
+            <option value="intermediate">Intermediate</option>
+            <option value="advanced">Advanced</option>
+          </select>
+        </div>
+        <button type="submit">Continue</button>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

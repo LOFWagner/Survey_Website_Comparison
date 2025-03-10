@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Welcome to the Email Trustworthiness Study</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <h1>Welcome!</h1>
+  <p>Please read the consent information below. By clicking “I Agree,” you consent to participate in this study.</p>
+  <!-- Consent details here -->
+  <form action="{{ url_for('demographics') }}" method="get">
+    <button type="submit">I Agree</button>
+  </form>
+</body>
+</html>

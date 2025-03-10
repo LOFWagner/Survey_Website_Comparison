@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Email Survey</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script>
+    // Track viewing time
+    let startTime = new Date().getTime();
+    function submitForm() {
+      let endTime = new Date().getTime();
+      let viewTime = endTime - startTime;
+      document.getElementById('view_time').value = viewTime;
+      return true;
+    }
+  </script>
+</head>
+<body>
+  <header>
+    <h1>Email Trustworthiness Survey</h1>
+  </header>
+  <div class="container">
+    <div class="progress">
+      <span>Progress:</span>
+      <div class="progress-bar">
+        <div class="progress-fill" style="width: {{ (pair_number / total_pairs) * 100 }}%"></div>
+      </div>
+      <span>{{ pair_number }} of {{ total_pairs }}</span>
+    </div>
+
+    <div class="email-pair">
+      <div class="email-column">
+        <div class="email-header">Email 1</div>
+        <div class="email-content">
+          {{ email_left|safe }}
+        </div>
+      </div>
+      <div class="email-column">
+        <div class="email-header">Email 2</div>
+        <div class="email-content">
+          {{ email_right|safe }}
+        </div>
+      </div>
+    </div>
+
+    <div class="selection-area">
+      <form action="{{ url_for('survey') }}" method="post" onsubmit="return submitForm()">
+        <input type="hidden" name="pair_number" value="{{ pair_number }}">
+        <input type="hidden" name="email_left" value="{{ file_left }}">
+        <input type="hidden" name="email_right" value="{{ file_right }}">
+        <input type="hidden" name="view_time" id="view_time" value="">
+
+        <h3>Which email appears more trustworthy?</h3>
+        <div class="radio-group">
+  <label class="radio-option">
+    <input type="radio" name="selected_email" value="left" required>
+    <span>Email 1</span>
+  </label>
+  <label class="radio-option">
+    <input type="radio" name="selected_email" value="right" required>
+    <span>Email 2</span>
+  </label>
+</div>
+
+<script>
+  // Add this after your existing script
+  document.querySelectorAll('.radio-option').forEach(option => {
+    option.addEventListener('click', function() {
+      // Remove selected class from all options
+      document.querySelectorAll('.radio-option').forEach(opt => {
+        opt.classList.remove('selected');
+      });
+      // Add selected class to clicked option
+      this.classList.add('selected');
+    });
+  });
+</script>
+
+        <h3>Please explain your reasoning (optional):</h3>
+        <textarea name="explanation"></textarea>
+
+        <button type="submit">Continue</button>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

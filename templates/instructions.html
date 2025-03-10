@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Instructions</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <header>
+    <h1>Email Trustworthiness Survey</h1>
+  </header>
+  <div class="container">
+    <div class="selection-area">
+      <h2>Instructions</h2>
+      <p>You will be shown a series of email pairs displayed side-by-side. For each pair, please select the email you find more trustworthy.</p>
+      <p>You will complete 10 comparisons. For each pair, the time you spend viewing the emails will be recorded.</p>
+      <p>Click the button below to begin.</p>
+      <form action="{{ url_for('survey') }}" method="get">
+        <button type="submit">Start Survey</button>
+      </form>
+    </div>
+  </div>
+</body>
+</html>
