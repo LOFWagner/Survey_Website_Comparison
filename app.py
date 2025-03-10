@@ -47,9 +47,15 @@ def generate_random_pairs():
 
 
 def save_response(response):
-    # Append the response as a new row in the CSV file
-    fieldnames = ['participant_id', 'timestamp', 'pair_number', 'email_left', 'email_right', 'selected_email',
-                  'explanation', 'view_time']
+    # Get all field names from the response, ensuring we include any demographic fields
+    fieldnames = ['participant_id', 'timestamp', 'pair_number', 'email_left', 'email_right',
+                  'selected_email', 'explanation', 'view_time']
+
+    # Add all demographic fields
+    for key in response.keys():
+        if key.startswith('demographics_') and key not in fieldnames:
+            fieldnames.append(key)
+
     file_exists = os.path.isfile(RESULTS_FILE)
     with open(RESULTS_FILE, 'a', newline='', encoding='utf-8') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
@@ -75,10 +81,15 @@ def index():
 
 @app.route('/demographics', methods=['GET', 'POST'])
 def demographics():
+    # If demographics already exist, skip to instructions
+    if 'demographics' in session:
+        return redirect(url_for('instructions'))
+
     if request.method == 'POST':
-        # Save demographics into session for later use (or store in DB)
+        # Save demographics into session for later use
         session['demographics'] = request.form.to_dict()
         return redirect(url_for('instructions'))
+
     return render_template('demographics.html')
 
 
@@ -101,7 +112,7 @@ def survey():
 
         response = {
             'participant_id': participant_id,
-            'timestamp': datetime.now().isoformat(),  # Fixed deprecated utcnow()
+            'timestamp': datetime.now().isoformat(),
             'pair_number': pair_number,
             'email_left': email_left,
             'email_right': email_right,
@@ -109,6 +120,12 @@ def survey():
             'explanation': explanation,
             'view_time': view_time
         }
+
+        # Add demographic data to the response
+        demographics = session.get('demographics', {})
+        for key, value in demographics.items():
+            response[f'demographics_{key}'] = value
+
         save_response(response)
 
         # Move to next pair
@@ -154,17 +171,24 @@ def survey():
 def thank_you():
     return render_template('thank_you.html')
 
+
 @app.route('/reset', methods=['GET'])
 def reset_survey():
-    # Keep participant_id but reset survey data
-    if 'participant_id' in session:
-        participant_id = session['participant_id']
-        session.clear()
+    # Keep participant_id and demographics but reset survey data
+    participant_id = session.get('participant_id')
+    demographics = session.get('demographics')
+
+    session.clear()
+
+    if participant_id:
         session['participant_id'] = participant_id
     else:
-        session.clear()
         session['participant_id'] = str(uuid.uuid4())
-    return redirect(url_for('index'))
+
+    if demographics:
+        session['demographics'] = demographics
+
+    return redirect(url_for('instructions'))
 
 if __name__ == '__main__':
     app.run(debug=True)
