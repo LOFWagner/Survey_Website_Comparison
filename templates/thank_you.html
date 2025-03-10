@@ -14,9 +14,11 @@
       <h2>Thank You for Participating!</h2>
       <p>Your responses have been recorded.</p>
       <p>If you'd like to participate in more comparisons, please click the button below.</p>
-      <form action="{{ url_for('survey') }}" method="get">
-        <button type="submit">Do More</button>
-      </form>
+      <div class="container">
+  <h1>Thank You for Participating!</h1>
+  <p>Your responses have been recorded. Thank you for your time.</p>
+  <a href="{{ url_for('reset_survey') }}" class="button">Start New Survey</a>
+</div>
     </div>
   </div>
 </body>

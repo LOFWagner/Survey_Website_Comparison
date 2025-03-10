@@ -4,13 +4,33 @@
   <meta charset="UTF-8">
   <title>Welcome to the Email Trustworthiness Study</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
-  <h1>Welcome!</h1>
-  <p>Please read the consent information below. By clicking “I Agree,” you consent to participate in this study.</p>
-  <!-- Consent details here -->
-  <form action="{{ url_for('demographics') }}" method="get">
-    <button type="submit">I Agree</button>
-  </form>
+  <header>
+    <h1>Email Trustworthiness Survey</h1>
+  </header>
+  <div class="demographics-container">
+    <div class="selection-area">
+      <h2>Welcome!</h2>
+      <p>Please read the consent information below. By clicking "I Agree," you consent to participate in this study.</p>
+
+      <!-- Consent details here -->
+      <div class="consent-information">
+        <p>This study aims to understand how people evaluate the trustworthiness of emails. Your participation will help researchers develop better strategies for email security awareness.</p>
+        <p>During this study, you will be asked to:</p>
+        <ul>
+          <li>Provide basic demographic information</li>
+          <li>Review pairs of emails and select which ones you find more trustworthy</li>
+          <li>Optionally provide explanations for your choices</li>
+        </ul>
+        <p>Your participation is voluntary and your responses will be kept confidential.</p>
+      </div>
+
+      <form action="{{ url_for('demographics') }}" method="get">
+        <button type="submit">I Agree</button>
+      </form>
+    </div>
+  </div>
 </body>
 </html>

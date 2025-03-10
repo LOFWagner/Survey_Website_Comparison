@@ -46,10 +46,16 @@ def save_response(response):
 
 @app.route('/')
 def index():
-    # Introduction/Consent page
-    # Generate and store a unique participant id in the session
+    # Generate and store a unique participant id in the session if not exists
     if 'participant_id' not in session:
         session['participant_id'] = str(uuid.uuid4())
+
+    # Clear previous survey progress
+    if 'survey_pairs' in session:
+        del session['survey_pairs']
+    if 'current_pair' in session:
+        del session['current_pair']
+
     return render_template('index.html')
 
 
@@ -81,7 +87,7 @@ def survey():
 
         response = {
             'participant_id': participant_id,
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now().isoformat(),  # Fixed deprecated utcnow()
             'pair_number': pair_number,
             'email_left': email_left,
             'email_right': email_right,
@@ -100,12 +106,17 @@ def survey():
         else:
             return redirect(url_for('survey'))
 
+    # Check if survey is already completed
+    current_pair = session.get('current_pair', 0)
+    if current_pair >= NUM_PAIRS:
+        return redirect(url_for('thank_you'))
+
     # On GET request: if survey not started, create random pairs and set counter
     if 'survey_pairs' not in session:
         session['survey_pairs'] = generate_random_pairs()
         session['current_pair'] = 0
+        current_pair = 0
 
-    current_pair = session.get('current_pair', 0)
     pairs = session.get('survey_pairs')
     # Get the current pair file names
     email_left, email_right = pairs[current_pair]
@@ -129,6 +140,17 @@ def survey():
 def thank_you():
     return render_template('thank_you.html')
 
+@app.route('/reset', methods=['GET'])
+def reset_survey():
+    # Keep participant_id but reset survey data
+    if 'participant_id' in session:
+        participant_id = session['participant_id']
+        session.clear()
+        session['participant_id'] = participant_id
+    else:
+        session.clear()
+        session['participant_id'] = str(uuid.uuid4())
+    return redirect(url_for('index'))
 
 if __name__ == '__main__':
     app.run(debug=True)
