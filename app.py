@@ -2,9 +2,10 @@ import os
 import random
 import csv
 import uuid
+import re
 from datetime import datetime
-from flask import Flask, render_template, request, redirect, url_for, session
 
+from flask import Flask, render_template, request, redirect, url_for, session, send_from_directory
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Replace with a secure secret key
 
@@ -15,10 +16,34 @@ RESULTS_FILE = 'results.csv'
 
 
 def load_email_files():
-    # Get all HTML files starting with phish_, ai_ or regular_
-    files = [f for f in os.listdir(EMAILS_DIR) if f.endswith('.html') and
+    # Get all HTML and PDF files starting with phish_, ai_ or regular_
+    files = [f for f in os.listdir(EMAILS_DIR) if (f.endswith('.html') or f.endswith('.pdf')) and
              (f.startswith('phish_') or f.startswith('ai_') or f.startswith('regular_'))]
     return files
+
+
+def get_email_content(filename):
+    file_path = os.path.join(EMAILS_DIR, filename)
+
+    if filename.endswith('.html'):
+        with open(file_path, encoding='utf-8') as f:
+            full_content = f.read()
+            return extract_email_content(full_content), 'html'
+
+    elif filename.endswith('.pdf'):
+        relative_path = os.path.join('emails', filename)
+        pdf_embed = f'''
+        <div class="pdf-container" style="position: relative;">
+            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10;"></div>
+            <object data="/{relative_path}" type="application/pdf" width="100%" height="600px">
+                <p>Unable to display PDF.</p>
+            </object>
+        </div>'''
+        return pdf_embed, 'pdf'
+
+@app.route('/emails/<path:filename>')
+def serve_email_file(filename):
+    return send_from_directory(EMAILS_DIR, filename)
 
 
 def generate_random_pairs():
@@ -44,6 +69,17 @@ def generate_random_pairs():
             used_pairs.add(pair_tuple)
 
     return pairs
+
+
+def extract_email_content(html_content):
+    """Extract the email container content without the surrounding HTML structure."""
+    # Extract just the email-container div and its contents
+    match = re.search(r'<div class="email-container">(.*?)</div>\s*</body>', html_content, re.DOTALL)
+    if match:
+        return '<div class="email-container">' + match.group(1) + '</div>'
+    else:
+        # Fallback if the expected structure isn't found
+        return html_content
 
 
 def save_response(response):
@@ -152,17 +188,16 @@ def survey():
     # Get the current pair file names
     email_left, email_right = pairs[current_pair]
 
-    # Load the actual HTML content for each email
-    with open(os.path.join(EMAILS_DIR, email_left), encoding='utf-8') as f:
-        content_left = f.read()
-    with open(os.path.join(EMAILS_DIR, email_right), encoding='utf-8') as f:
-        content_right = f.read()
+    content_left, type_left = get_email_content(email_left)
+    content_right, type_right = get_email_content(email_right)
 
     return render_template('survey.html',
                            pair_number=current_pair + 1,
                            total_pairs=NUM_PAIRS,
                            email_left=content_left,
                            email_right=content_right,
+                           type_left=type_left,
+                           type_right=type_right,
                            file_left=email_left,
                            file_right=email_right)
 
@@ -189,6 +224,7 @@ def reset_survey():
         session['demographics'] = demographics
 
     return redirect(url_for('instructions'))
+
 
 if __name__ == '__main__':
     app.run(debug=True)
