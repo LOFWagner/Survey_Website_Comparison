@@ -21,8 +21,7 @@ def init_db():
     c = conn.cursor()
     c.execute('''
         CREATE TABLE IF NOT EXISTS responses (
-            participant_id TEXT,
-            timestamp TEXT,
+            response_id TEXT,
             pair_number INTEGER,
             email_left TEXT,
             email_right TEXT,
@@ -102,9 +101,10 @@ def extract_email_content(html_content):
         # Fallback if the expected structure isn't found
         return html_content
 
+
 def save_response(response):
     if DEBUG:
-        # Save to CSV
+        # Save to CSV - keeping original format for debug mode
         fieldnames = ['participant_id', 'timestamp', 'pair_number', 'email_left', 'email_right',
                       'selected_email', 'explanation', 'view_time']
 
@@ -119,16 +119,18 @@ def save_response(response):
                 writer.writeheader()
             writer.writerow(response)
     else:
-        # Save to SQLite
+        # Generate a random response ID instead of using participant_id
+        response_id = str(uuid.uuid4())
+
+        # Save to SQLite without participant_id and timestamp
         conn = sqlite3.connect('results.db')
         c = conn.cursor()
         c.execute('''
-            INSERT INTO responses (participant_id, timestamp, pair_number, email_left, email_right,
-                                   selected_email, explanation, view_time, demographics_age, demographics_experience)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO responses (response_id, pair_number, email_left, email_right,
+                               selected_email, explanation, view_time, demographics_age, demographics_experience)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
-            response['participant_id'],
-            response['timestamp'],
+            response_id,
             response['pair_number'],
             response['email_left'],
             response['email_right'],
