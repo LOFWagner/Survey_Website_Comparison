@@ -85,8 +85,7 @@ def init_db():
                 explanation TEXT,
                 view_time INTEGER,
                 demographics_age TEXT,
-                demographics_experience TEXT,
-                timestamp TEXT
+                demographics_experience TEXT
             )
         ''')
     else:
@@ -103,8 +102,7 @@ def init_db():
                     explanation TEXT,
                     view_time INTEGER,
                     demographics_age TEXT,
-                    demographics_experience TEXT,
-                    timestamp TIMESTAMP
+                    demographics_experience TEXT
                 )
             ''')
 
@@ -177,7 +175,6 @@ def extract_email_content(html_content):
         # Fallback if the expected structure isn't found
         return html_content
 
-
 def save_response(response):
     """Save survey response to database"""
     conn = get_db_connection()
@@ -188,7 +185,6 @@ def save_response(response):
 
     # Store participant ID separately if needed
     participant_id = response.get('participant_id')
-    timestamp = response.get('timestamp', datetime.now().isoformat())
 
     # Determine placeholders based on connection type
     placeholders = '?' if isinstance(conn, sqlite3.Connection) else '%s'
@@ -198,9 +194,9 @@ def save_response(response):
         INSERT INTO responses (
             response_id, pair_number, email_left, email_right,
             selected_email, explanation, view_time,
-            demographics_age, demographics_experience, timestamp
+            demographics_age, demographics_experience
         )
-        VALUES ({', '.join([placeholders] * 10)})
+        VALUES ({', '.join([placeholders] * 9)})
     '''
 
     # Execute with parameters
@@ -213,8 +209,7 @@ def save_response(response):
         response['explanation'],
         response['view_time'],
         response.get('demographics_age', ''),
-        response.get('demographics_experience', ''),
-        timestamp
+        response.get('demographics_experience', '')
     ))
 
     conn.commit()
@@ -265,7 +260,6 @@ def survey():
 
         response = {
             'participant_id': participant_id,
-            'timestamp': datetime.now().isoformat(),
             'pair_number': pair_number,
             'email_left': email_left,
             'email_right': email_right,
