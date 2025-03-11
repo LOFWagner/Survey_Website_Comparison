@@ -13,6 +13,24 @@
       document.getElementById('view_time').value = viewTime;
       return true;
     }
+
+    // Search function
+    function searchCharacterInfo() {
+      let input = document.getElementById('searchInput').value.toLowerCase();
+      let info = document.getElementById('characterInfo');
+      let paragraphs = info.getElementsByTagName('p');
+      let lists = info.getElementsByTagName('ul');
+
+      // Loop through all paragraphs and lists, and hide those that don't match the search query
+      for (let i = 0; i < paragraphs.length; i++) {
+        let text = paragraphs[i].textContent || paragraphs[i].innerText;
+        paragraphs[i].style.display = text.toLowerCase().includes(input) ? '' : 'none';
+      }
+      for (let i = 0; i < lists.length; i++) {
+        let text = lists[i].textContent || lists[i].innerText;
+        lists[i].style.display = text.toLowerCase().includes(input) ? '' : 'none';
+      }
+    }
   </script>
   <style>
     .container {
@@ -99,8 +117,9 @@
         </form>
       </div>
     </div>
-    <div class="character-info">
+    <div class="character-info" id="characterInfo">
       <h2>Character Information</h2>
+      <input type="text" id="searchInput" onkeyup="searchCharacterInfo()" placeholder="Search for words..">
       <h3>Company Profile: Core KG</h3>
       <p><strong>Company Overview:</strong> Core KG is a mid-sized German tech company founded in 2015, specializing in enterprise cloud solutions and digital transformation services. Headquartered in Berlin with offices in Munich and Hamburg, the company employs approximately 250 people across Germany.</p>
       <p><strong>Core Business Areas:</strong></p>
