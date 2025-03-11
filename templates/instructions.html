@@ -4,22 +4,105 @@
   <meta charset="UTF-8">
   <title>Instructions</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script>
+    function searchCharacterInfo() {
+      let input = document.getElementById('searchInput').value.toLowerCase();
+      let info = document.getElementById('characterInfo');
+      let paragraphs = info.getElementsByTagName('p');
+      let lists = info.getElementsByTagName('ul');
+
+      for (let i = 0; i < paragraphs.length; i++) {
+        let text = paragraphs[i].textContent || paragraphs[i].innerText;
+        paragraphs[i].style.display = text.toLowerCase().includes(input) ? '' : 'none';
+      }
+      for (let i = 0; i < lists.length; i++) {
+        let text = lists[i].textContent || lists[i].innerText;
+        lists[i].style.display = text.toLowerCase().includes(input) ? '' : 'none';
+      }
+    }
+  </script>
+  <style>
+    .container {
+      display: flex;
+      flex-direction: column;
+    }
+    .main-content {
+      flex: 1;
+    }
+    .character-info {
+      margin-top: 20px;
+      border: 1px solid #ccc;
+      padding: 10px;
+      background-color: #f9f9f9;
+    }
+  </style>
 </head>
 <body>
   <header>
     <h1>Email Trustworthiness Survey</h1>
   </header>
   <div class="container">
-    <div class="selection-area">
-      <h2>Instructions</h2>
-      <p>You will be shown a series of email pairs displayed side-by-side. For each pair, please select the email you find more trustworthy.</p>
-      <p>You will complete 10 comparisons. For each pair, the time you spend viewing the emails will be recorded.</p>
-      <p>Click the button below to begin.</p>
-      <form action="{{ url_for('survey') }}" method="get">
-        <button type="submit">Start Survey</button>
-      </form>
-      <h3>Search Functionality</h3>
-      <p>During the survey, you can use the search bar to filter the character information displayed on the right side of the screen. Simply type in a keyword, and the relevant information will be highlighted, making it easier for you to find specific details.</p>
+    <div class="main-content">
+      <div class="selection-area">
+        <h2>Instructions</h2>
+        <p>You will be shown a series of email pairs displayed side-by-side. For each pair, please select the email you find more trustworthy.</p>
+        <p>You will complete 10 comparisons. For each pair, the time you spend viewing the emails will be recorded.</p>
+        <p>Before proceeding, please read the character information below. You can use the search bar to filter the information.</p>
+        <p>Click the button below to begin.</p>
+        <form action="{{ url_for('survey') }}" method="get">
+          <button type="submit">Start Survey</button>
+        </form>
+      </div>
+    </div>
+    <div class="character-info" id="characterInfo">
+      <h2>Character Information</h2>
+      <input type="text" id="searchInput" onkeyup="searchCharacterInfo()" placeholder="Search for words..">
+      <h3>Company Profile: Core KG</h3>
+      <p><strong>Company Overview:</strong> Core KG is a mid-sized German tech company founded in 2015, specializing in enterprise cloud solutions and digital transformation services. Headquartered in Berlin with offices in Munich and Hamburg, the company employs approximately 250 people across Germany.</p>
+      <p><strong>Core Business Areas:</strong></p>
+      <ul>
+        <li>Cloud infrastructure optimization</li>
+        <li>Custom enterprise software development</li>
+        <li>Digital workplace solutions</li>
+        <li>Cybersecurity consulting</li>
+        <li>Healthcare technology integration</li>
+      </ul>
+      <p><strong>Company Culture:</strong> Core prides itself on a collaborative work environment with flexible working arrangements, regular innovation workshops, and a strong commitment to work-life balance. The company has been recognized as one of "Germany's Best Employers for Work-Life Balance" for three consecutive years.</p>
+      <h3>Complete Profile Cards (For Study Participants)</h3>
+      <h4>John Doe - HR Benefits Specialist</h4>
+      <p><strong>Personal Background</strong></p>
+      <ul>
+        <li>Age: 41</li>
+        <li>Location: Munich, Germany (Schwabing district)</li>
+        <li>Education: Bachelor in Human Resource Management, Ludwig-Maximilians-Universität München (2005); HR Management Certificate, IHK München (2007)</li>
+        <li>Family: Divorced, two children (Lukas, 12 and Sophie, 9, shared custody)</li>
+        <li>Hobbies: Marathon running (completed Berlin Marathon 2022), cooking Mediterranean cuisine, volunteering at local food bank, amateur photography</li>
+      </ul>
+      <p><strong>Professional Details</strong></p>
+      <ul>
+        <li>Current Position: Senior Benefits Coordinator at Core KG, Munich office (since 2019)</li>
+        <li>Department Size: Team of 5 HR specialists (3 in Munich, 2 in Berlin)</li>
+        <li>Focus Areas: Health benefits, retirement plans, wellness programs, work-life balance initiatives, employee assistance programs</li>
+        <li>Previous Experience: 8 years at AOK as Benefits Analyst, 3 years at Siemens as HR Assistant</li>
+        <li>Certifications: PHR (Professional in Human Resources), CEBS (Certified Employee Benefit Specialist), Mental Health First Aid Certification</li>
+        <li>Languages: German (native), English (proficient), Italian (conversational)</li>
+      </ul>
+      <p><strong>Current Projects</strong></p>
+      <ul>
+        <li>Implementing new mental health support program (MindWell Initiative with company MindBetterZ)</li>
+        <li>Coordinating annual benefits enrollment (deadline: November 15)</li>
+        <li>Developing employee wellness initiatives including fitness subsidies (Project name: WellSpring)</li>
+        <li>Creating comprehensive benefits information materials in both German and English</li>
+        <li>Organizing monthly wellness workshops (Internal Project name: Zen Cycle)</li>
+        <li>Negotiating improved family support benefits with providers</li>
+      </ul>
+      <p><strong>Professional Goals</strong></p>
+      <ul>
+        <li>Complete Advanced HR Analytics certification by year-end</li>
+        <li>Expand mental health resources for remote employees</li>
+        <li>Improve benefits enrollment participation by 15%</li>
+        <li>Develop comprehensive onboarding benefits package for new hires</li>
+      </ul>
     </div>
   </div>
 </body>
