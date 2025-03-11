@@ -29,9 +29,7 @@ DB_CONFIG = {
     },
     'production': {
         # Default to SQLite (minimal installation)
-        'type': os.environ.get('DB_TYPE', 'sqlite'),
-        'sqlite_path': os.environ.get('DB_PATH', '/var/lib/phishing_survey/results.db'),
-        # PostgreSQL config (only used if DB_TYPE=postgres)
+        'type': 'postgres',
         'pg_host': os.environ.get('DB_HOST', 'localhost'),
         'pg_name': os.environ.get('DB_NAME', 'phishing_survey'),
         'pg_user': os.environ.get('DB_USER', 'postgres'),
@@ -76,6 +74,7 @@ def init_db():
 
     # SQLite and PostgreSQL have slightly different syntax
     if isinstance(conn, sqlite3.Connection):
+        # SQLite code remains the same
         c.execute('''
             CREATE TABLE IF NOT EXISTS responses (
                 response_id TEXT PRIMARY KEY,
@@ -91,21 +90,23 @@ def init_db():
             )
         ''')
     else:
-        # PostgreSQL
-        c.execute('''
-            CREATE TABLE IF NOT EXISTS responses (
-                response_id TEXT PRIMARY KEY,
-                pair_number INTEGER,
-                email_left TEXT,
-                email_right TEXT,
-                selected_email TEXT,
-                explanation TEXT,
-                view_time INTEGER,
-                demographics_age TEXT,
-                demographics_experience TEXT,
-                timestamp TIMESTAMP
-            )
-        ''')
+        # PostgreSQL - check if table exists first
+        c.execute("SELECT to_regclass('public.responses')")
+        if c.fetchone()[0] is None:
+            c.execute('''
+                CREATE TABLE responses (
+                    response_id TEXT PRIMARY KEY,
+                    pair_number INTEGER,
+                    email_left TEXT,
+                    email_right TEXT,
+                    selected_email TEXT,
+                    explanation TEXT,
+                    view_time INTEGER,
+                    demographics_age TEXT,
+                    demographics_experience TEXT,
+                    timestamp TIMESTAMP
+                )
+            ''')
 
     conn.commit()
     conn.close()
@@ -176,13 +177,17 @@ def extract_email_content(html_content):
         # Fallback if the expected structure isn't found
         return html_content
 
+
 def save_response(response):
     """Save survey response to database"""
     conn = get_db_connection()
     c = conn.cursor()
 
-    # Generate response ID (use UUID for production)
-    response_id = response.get('participant_id') if DEBUG else str(uuid.uuid4())
+    # Always generate a unique response ID
+    response_id = str(uuid.uuid4())
+
+    # Store participant ID separately if needed
+    participant_id = response.get('participant_id')
     timestamp = response.get('timestamp', datetime.now().isoformat())
 
     # Determine placeholders based on connection type
