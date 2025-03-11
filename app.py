@@ -340,5 +340,41 @@ def reset_survey():
 
     return redirect(url_for('instructions'))
 
+
+@app.route('/admin/export_csv')
+def export_csv():
+    import csv
+    from io import StringIO
+    from flask import Response
+
+    conn = get_db_connection()
+    c = conn.cursor()
+
+    # Query all data
+    c.execute("SELECT * FROM responses")
+    rows = c.fetchall()
+
+    # Get column names
+    if isinstance(conn, sqlite3.Connection):
+        column_names = [description[0] for description in c.description]
+    else:
+        column_names = [desc[0] for desc in c.description]
+
+    # Create CSV in memory
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(column_names)
+    writer.writerows(rows)
+
+    conn.close()
+
+    # Return CSV as a downloadable file
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-disposition": "attachment; filename=responses.csv"}
+    )
+
+
 if __name__ == '__main__':
     app.run(debug=True)
