@@ -80,6 +80,22 @@ header h1 {
   overflow-y: auto;
 }
 
+#searchInput {
+  width: 100%;
+  padding: 15px;
+  font-size: 18px;
+  border: 2px solid var(--primary-color);
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+  margin-bottom: 20px;
+  box-sizing: border-box;
+}
+
+#searchInput::placeholder {
+  color: #aaa;
+  font-style: italic;
+}
+
 .selection-area {
   background-color: var(--card-bg);
   border-radius: var(--border-radius);
