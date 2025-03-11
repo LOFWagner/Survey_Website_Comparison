@@ -3,6 +3,7 @@ import random
 import csv
 import uuid
 import re
+import sqlite3
 from datetime import datetime
 
 from flask import Flask, render_template, request, redirect, url_for, session, send_from_directory
@@ -13,14 +14,36 @@ app.secret_key = 'your_secret_key'  # Replace with a secure secret key
 EMAILS_DIR = os.path.join(os.getcwd(), 'emails')
 NUM_PAIRS = 10
 RESULTS_FILE = 'results.csv'
+DEBUG = False
+# Initialize SQLite database
+def init_db():
+    conn = sqlite3.connect('results.db')
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS responses (
+            participant_id TEXT,
+            timestamp TEXT,
+            pair_number INTEGER,
+            email_left TEXT,
+            email_right TEXT,
+            selected_email TEXT,
+            explanation TEXT,
+            view_time INTEGER,
+            demographics_age TEXT,
+            demographics_experience TEXT
+        )
+    ''')
+    conn.commit()
+    conn.close()
 
+# Call init_db to ensure the database is initialized
+init_db()
 
 def load_email_files():
     # Get all HTML and PDF files starting with phish_, ai_ or regular_
     files = [f for f in os.listdir(EMAILS_DIR) if (f.endswith('.html') or f.endswith('.pdf')) and
              (f.startswith('phish_') or f.startswith('ai_') or f.startswith('regular_'))]
     return files
-
 
 def get_email_content(filename):
     file_path = os.path.join(EMAILS_DIR, filename)
@@ -35,7 +58,7 @@ def get_email_content(filename):
         pdf_embed = f'''
         <div class="pdf-container" style="position: relative;">
             <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10;"></div>
-            <object data="/{relative_path}" type="application/pdf" width="100%" height="600px">
+            <object data="/{relative_path}#zoom=65" type="application/pdf" width="100%" height="600px">
                 <p>Unable to display PDF.</p>
             </object>
         </div>'''
@@ -44,7 +67,6 @@ def get_email_content(filename):
 @app.route('/emails/<path:filename>')
 def serve_email_file(filename):
     return send_from_directory(EMAILS_DIR, filename)
-
 
 def generate_random_pairs():
     # Load email files
@@ -70,7 +92,6 @@ def generate_random_pairs():
 
     return pairs
 
-
 def extract_email_content(html_content):
     """Extract the email container content without the surrounding HTML structure."""
     # Extract just the email-container div and its contents
@@ -81,24 +102,44 @@ def extract_email_content(html_content):
         # Fallback if the expected structure isn't found
         return html_content
 
-
 def save_response(response):
-    # Get all field names from the response, ensuring we include any demographic fields
-    fieldnames = ['participant_id', 'timestamp', 'pair_number', 'email_left', 'email_right',
-                  'selected_email', 'explanation', 'view_time']
+    if DEBUG:
+        # Save to CSV
+        fieldnames = ['participant_id', 'timestamp', 'pair_number', 'email_left', 'email_right',
+                      'selected_email', 'explanation', 'view_time']
 
-    # Add all demographic fields
-    for key in response.keys():
-        if key.startswith('demographics_') and key not in fieldnames:
-            fieldnames.append(key)
+        for key in response.keys():
+            if key.startswith('demographics_') and key not in fieldnames:
+                fieldnames.append(key)
 
-    file_exists = os.path.isfile(RESULTS_FILE)
-    with open(RESULTS_FILE, 'a', newline='', encoding='utf-8') as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        if not file_exists:
-            writer.writeheader()
-        writer.writerow(response)
-
+        file_exists = os.path.isfile(RESULTS_FILE)
+        with open(RESULTS_FILE, 'a', newline='', encoding='utf-8') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            if not file_exists:
+                writer.writeheader()
+            writer.writerow(response)
+    else:
+        # Save to SQLite
+        conn = sqlite3.connect('results.db')
+        c = conn.cursor()
+        c.execute('''
+            INSERT INTO responses (participant_id, timestamp, pair_number, email_left, email_right,
+                                   selected_email, explanation, view_time, demographics_age, demographics_experience)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            response['participant_id'],
+            response['timestamp'],
+            response['pair_number'],
+            response['email_left'],
+            response['email_right'],
+            response['selected_email'],
+            response['explanation'],
+            response['view_time'],
+            response.get('demographics_age', ''),
+            response.get('demographics_experience', '')
+        ))
+        conn.commit()
+        conn.close()
 
 @app.route('/')
 def index():
@@ -114,7 +155,6 @@ def index():
 
     return render_template('index.html')
 
-
 @app.route('/demographics', methods=['GET', 'POST'])
 def demographics():
     # If demographics already exist, skip to instructions
@@ -128,11 +168,9 @@ def demographics():
 
     return render_template('demographics.html')
 
-
 @app.route('/instructions')
 def instructions():
     return render_template('instructions.html')
-
 
 @app.route('/survey', methods=['GET', 'POST'])
 def survey():
@@ -201,11 +239,9 @@ def survey():
                            file_left=email_left,
                            file_right=email_right)
 
-
 @app.route('/thank_you')
 def thank_you():
     return render_template('thank_you.html')
-
 
 @app.route('/reset', methods=['GET'])
 def reset_survey():
@@ -224,7 +260,6 @@ def reset_survey():
         session['demographics'] = demographics
 
     return redirect(url_for('instructions'))
-
 
 if __name__ == '__main__':
     app.run(debug=True)
