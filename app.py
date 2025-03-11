@@ -1,10 +1,16 @@
 import os
 import random
-import csv
 import uuid
 import re
 import sqlite3
 from datetime import datetime
+
+# Try importing PostgreSQL driver (optional for production)
+try:
+    import psycopg2
+    POSTGRES_AVAILABLE = True
+except ImportError:
+    POSTGRES_AVAILABLE = False
 
 from flask import Flask, render_template, request, redirect, url_for, session, send_from_directory
 app = Flask(__name__)
@@ -13,25 +19,94 @@ app.secret_key = 'your_secret_key'  # Replace with a secure secret key
 # Constants
 EMAILS_DIR = os.path.join(os.getcwd(), 'emails')
 NUM_PAIRS = 10
-RESULTS_FILE = 'results.csv'
-DEBUG = False
-# Initialize SQLite database
+DEBUG = True
+
+# Database configuration
+DB_CONFIG = {
+    'debug': {
+        'type': 'sqlite',
+        'path': 'dev_results.db'
+    },
+    'production': {
+        # Default to SQLite (minimal installation)
+        'type': os.environ.get('DB_TYPE', 'sqlite'),
+        'sqlite_path': os.environ.get('DB_PATH', '/var/lib/phishing_survey/results.db'),
+        # PostgreSQL config (only used if DB_TYPE=postgres)
+        'pg_host': os.environ.get('DB_HOST', 'localhost'),
+        'pg_name': os.environ.get('DB_NAME', 'phishing_survey'),
+        'pg_user': os.environ.get('DB_USER', 'postgres'),
+        'pg_pass': os.environ.get('DB_PASSWORD', ''),
+        'pg_port': os.environ.get('DB_PORT', '5432')
+    }
+}
+
+def get_db_connection():
+    """Get database connection based on current mode"""
+    if DEBUG:
+        config = DB_CONFIG['debug']
+        return sqlite3.connect(config['path'])
+    else:
+        config = DB_CONFIG['production']
+        db_type = config['type'].lower()
+
+        if db_type == 'postgres' and POSTGRES_AVAILABLE:
+            return psycopg2.connect(
+                host=config['pg_host'],
+                database=config['pg_name'],
+                user=config['pg_user'],
+                password=config['pg_pass'],
+                port=config['pg_port']
+            )
+        else:
+            # Ensure directory exists for SQLite DB
+            db_path = config['sqlite_path']
+            db_dir = os.path.dirname(db_path)
+            if db_dir and not os.path.exists(db_dir):
+                try:
+                    os.makedirs(db_dir)
+                except OSError:
+                    # Fall back to local path if directory creation fails
+                    db_path = 'results.db'
+            return sqlite3.connect(db_path)
+
 def init_db():
-    conn = sqlite3.connect('results.db')
+    """Initialize the database with required tables"""
+    conn = get_db_connection()
     c = conn.cursor()
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS responses (
-            response_id TEXT,
-            pair_number INTEGER,
-            email_left TEXT,
-            email_right TEXT,
-            selected_email TEXT,
-            explanation TEXT,
-            view_time INTEGER,
-            demographics_age TEXT,
-            demographics_experience TEXT
-        )
-    ''')
+
+    # SQLite and PostgreSQL have slightly different syntax
+    if isinstance(conn, sqlite3.Connection):
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS responses (
+                response_id TEXT PRIMARY KEY,
+                pair_number INTEGER,
+                email_left TEXT,
+                email_right TEXT,
+                selected_email TEXT,
+                explanation TEXT,
+                view_time INTEGER,
+                demographics_age TEXT,
+                demographics_experience TEXT,
+                timestamp TEXT
+            )
+        ''')
+    else:
+        # PostgreSQL
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS responses (
+                response_id TEXT PRIMARY KEY,
+                pair_number INTEGER,
+                email_left TEXT,
+                email_right TEXT,
+                selected_email TEXT,
+                explanation TEXT,
+                view_time INTEGER,
+                demographics_age TEXT,
+                demographics_experience TEXT,
+                timestamp TIMESTAMP
+            )
+        ''')
+
     conn.commit()
     conn.close()
 
@@ -101,47 +176,44 @@ def extract_email_content(html_content):
         # Fallback if the expected structure isn't found
         return html_content
 
-
 def save_response(response):
-    if DEBUG:
-        # Save to CSV - keeping original format for debug mode
-        fieldnames = ['participant_id', 'timestamp', 'pair_number', 'email_left', 'email_right',
-                      'selected_email', 'explanation', 'view_time']
+    """Save survey response to database"""
+    conn = get_db_connection()
+    c = conn.cursor()
 
-        for key in response.keys():
-            if key.startswith('demographics_') and key not in fieldnames:
-                fieldnames.append(key)
+    # Generate response ID (use UUID for production)
+    response_id = response.get('participant_id') if DEBUG else str(uuid.uuid4())
+    timestamp = response.get('timestamp', datetime.now().isoformat())
 
-        file_exists = os.path.isfile(RESULTS_FILE)
-        with open(RESULTS_FILE, 'a', newline='', encoding='utf-8') as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            if not file_exists:
-                writer.writeheader()
-            writer.writerow(response)
-    else:
-        # Generate a random response ID instead of using participant_id
-        response_id = str(uuid.uuid4())
+    # Determine placeholders based on connection type
+    placeholders = '?' if isinstance(conn, sqlite3.Connection) else '%s'
 
-        # Save to SQLite without participant_id and timestamp
-        conn = sqlite3.connect('results.db')
-        c = conn.cursor()
-        c.execute('''
-            INSERT INTO responses (response_id, pair_number, email_left, email_right,
-                               selected_email, explanation, view_time, demographics_age, demographics_experience)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (
-            response_id,
-            response['pair_number'],
-            response['email_left'],
-            response['email_right'],
-            response['selected_email'],
-            response['explanation'],
-            response['view_time'],
-            response.get('demographics_age', ''),
-            response.get('demographics_experience', '')
-        ))
-        conn.commit()
-        conn.close()
+    # SQL query with appropriate placeholders
+    query = f'''
+        INSERT INTO responses (
+            response_id, pair_number, email_left, email_right,
+            selected_email, explanation, view_time,
+            demographics_age, demographics_experience, timestamp
+        )
+        VALUES ({', '.join([placeholders] * 10)})
+    '''
+
+    # Execute with parameters
+    c.execute(query, (
+        response_id,
+        response['pair_number'],
+        response['email_left'],
+        response['email_right'],
+        response['selected_email'],
+        response['explanation'],
+        response['view_time'],
+        response.get('demographics_age', ''),
+        response.get('demographics_experience', ''),
+        timestamp
+    ))
+
+    conn.commit()
+    conn.close()
 
 @app.route('/')
 def index():
