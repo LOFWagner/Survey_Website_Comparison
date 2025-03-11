@@ -1,7 +1,7 @@
 # Email Trustworthiness Survey
 
 A web-based survey application designed to evaluate human perception of email trustworthiness, specifically focusing on phishing emails and the malicious use of AI-generated content.
-
+![Email Selector UI](email_selector.png)
 ## Project Overview
 
 This application was developed as part of a bachelor's thesis investigating how AI can be used maliciously in phishing attacks. The survey presents participants with pairs of emails and asks them to select which one appears more trustworthy, collecting data on how people perceive different types of emails.
