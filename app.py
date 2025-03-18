@@ -74,7 +74,7 @@ def init_db():
 
     # SQLite and PostgreSQL have slightly different syntax
     if isinstance(conn, sqlite3.Connection):
-        # SQLite code remains the same
+        # Add tags columns
         c.execute('''
             CREATE TABLE IF NOT EXISTS responses (
                 response_id TEXT PRIMARY KEY,
@@ -82,6 +82,12 @@ def init_db():
                 email_left TEXT,
                 email_right TEXT,
                 selected_email TEXT,
+                email_left_type TEXT,
+                email_left_tags TEXT,
+                email_right_type TEXT,
+                email_right_tags TEXT,
+                selected_email_type TEXT,
+                selected_email_tags TEXT,
                 explanation TEXT,
                 view_time INTEGER,
                 demographics_age TEXT,
@@ -89,7 +95,7 @@ def init_db():
             )
         ''')
     else:
-        # PostgreSQL - check if table exists first
+        # PostgreSQL with tags columns
         c.execute("SELECT to_regclass('public.responses')")
         if c.fetchone()[0] is None:
             c.execute('''
@@ -99,6 +105,12 @@ def init_db():
                     email_left TEXT,
                     email_right TEXT,
                     selected_email TEXT,
+                    email_left_type TEXT,
+                    email_left_tags TEXT,
+                    email_right_type TEXT,
+                    email_right_tags TEXT,
+                    selected_email_type TEXT,
+                    selected_email_tags TEXT,
                     explanation TEXT,
                     view_time INTEGER,
                     demographics_age TEXT,
@@ -112,11 +124,23 @@ def init_db():
 # Call init_db to ensure the database is initialized
 init_db()
 
+
 def load_email_files():
-    # Get all HTML and PDF files starting with phish_, ai_ or regular_
+    """Get all HTML and PDF files with their extracted tags"""
     files = [f for f in os.listdir(EMAILS_DIR) if (f.endswith('.html') or f.endswith('.pdf')) and
              (f.startswith('phish_') or f.startswith('ai_') or f.startswith('regular_'))]
-    return files
+
+    # Create file info with extracted tags
+    file_info = []
+    for filename in files:
+        tags_info = extract_email_tags(filename)
+        file_info.append({
+            'filename': filename,
+            'type': tags_info['type'],
+            'tags': tags_info['tags']
+        })
+
+    return file_info
 
 def get_email_content(filename):
     file_path = os.path.join(EMAILS_DIR, filename)
@@ -142,11 +166,11 @@ def serve_email_file(filename):
     return send_from_directory(EMAILS_DIR, filename)
 
 def generate_random_pairs():
-    # Load email files
-    emails = load_email_files()
+    # Load email files with tags
+    email_files = load_email_files()
 
     # Check if we have enough unique emails
-    if len(emails) < 2:
+    if len(email_files) < 2:
         raise ValueError("Not enough unique email files to create pairs")
 
     pairs = []
@@ -154,9 +178,9 @@ def generate_random_pairs():
 
     while len(pairs) < NUM_PAIRS:
         # Randomly select two distinct emails from the list
-        pair = random.sample(emails, 2)
-        pair_tuple = tuple(pair)
-        reverse_pair = tuple(reversed(pair))
+        pair = random.sample(email_files, 2)
+        pair_tuple = (pair[0]['filename'], pair[1]['filename'])
+        reverse_pair = (pair[1]['filename'], pair[0]['filename'])
 
         # Ensure we haven't used this pair before (in either order)
         if pair_tuple not in used_pairs and reverse_pair not in used_pairs:
@@ -164,6 +188,60 @@ def generate_random_pairs():
             used_pairs.add(pair_tuple)
 
     return pairs
+
+def save_response(response):
+    """Save survey response to database with tag information"""
+    conn = get_db_connection()
+    c = conn.cursor()
+
+    # Always generate a unique response ID
+    response_id = str(uuid.uuid4())
+
+    # Store participant ID separately if needed
+    participant_id = response.get('participant_id')
+
+    # Process tags for left, right, and selected emails
+    left_tags_info = extract_email_tags(response['email_left'])
+    right_tags_info = extract_email_tags(response['email_right'])
+    selected_tags_info = extract_email_tags(response['selected_email'])
+
+    # Determine placeholders based on connection type
+    placeholders = '?' if isinstance(conn, sqlite3.Connection) else '%s'
+
+    # SQL query with appropriate placeholders
+    query = f'''
+        INSERT INTO responses (
+            response_id, pair_number, email_left, email_right,
+            selected_email, email_left_type, email_left_tags,
+            email_right_type, email_right_tags,
+            selected_email_type, selected_email_tags,
+            explanation, view_time,
+            demographics_age, demographics_experience
+        )
+        VALUES ({', '.join([placeholders] * 15)})
+    '''
+
+    # Execute with parameters
+    c.execute(query, (
+        response_id,
+        response['pair_number'],
+        response['email_left'],
+        response['email_right'],
+        response['selected_email'],
+        left_tags_info['type'],
+        ','.join(left_tags_info['tags']),
+        right_tags_info['type'],
+        ','.join(right_tags_info['tags']),
+        selected_tags_info['type'],
+        ','.join(selected_tags_info['tags']),
+        response['explanation'],
+        response['view_time'],
+        response.get('demographics_age', ''),
+        response.get('demographics_experience', '')
+    ))
+
+    conn.commit()
+    conn.close()
 
 def extract_email_content(html_content):
     """Extract the email container content without the surrounding HTML structure."""
@@ -174,46 +252,6 @@ def extract_email_content(html_content):
     else:
         # Fallback if the expected structure isn't found
         return html_content
-
-def save_response(response):
-    """Save survey response to database"""
-    conn = get_db_connection()
-    c = conn.cursor()
-
-    # Always generate a unique response ID
-    response_id = str(uuid.uuid4())
-
-    # Store participant ID separately if needed
-    participant_id = response.get('participant_id')
-
-    # Determine placeholders based on connection type
-    placeholders = '?' if isinstance(conn, sqlite3.Connection) else '%s'
-
-    # SQL query with appropriate placeholders
-    query = f'''
-        INSERT INTO responses (
-            response_id, pair_number, email_left, email_right,
-            selected_email, explanation, view_time,
-            demographics_age, demographics_experience
-        )
-        VALUES ({', '.join([placeholders] * 9)})
-    '''
-
-    # Execute with parameters
-    c.execute(query, (
-        response_id,
-        response['pair_number'],
-        response['email_left'],
-        response['email_right'],
-        response['selected_email'],
-        response['explanation'],
-        response['view_time'],
-        response.get('demographics_age', ''),
-        response.get('demographics_experience', '')
-    ))
-
-    conn.commit()
-    conn.close()
 
 @app.route('/')
 def index():
@@ -369,6 +407,28 @@ def export_csv():
         headers={"Content-disposition": "attachment; filename=responses.csv"}
     )
 
+
+def extract_email_tags(filename):
+    """Extract prefix type and psychological tags from email filename.
+    Example: 'phish_urgency_authority_example.html' will return
+    {'type': 'phish', 'tags': ['urgency', 'authority']}"""
+
+    parts = filename.split('_')
+    if len(parts) < 2:
+        return {'type': 'unknown', 'tags': []}
+
+    # First part is the type (phish, ai, regular)
+    email_type = parts[0]
+
+    # Extract file extension
+    name_parts = parts[-1].split('.')
+    if len(name_parts) > 1:
+        # Get everything between type and filename (excluding extension)
+        tags = parts[1:-1]
+        return {'type': email_type, 'tags': tags}
+    else:
+        # No extension found, assume all remaining parts are tags
+        return {'type': email_type, 'tags': parts[1:]}
 
 if __name__ == '__main__':
     app.run(debug=True)
