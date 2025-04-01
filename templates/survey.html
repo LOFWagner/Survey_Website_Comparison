@@ -31,6 +31,23 @@
         lists[i].style.display = text.toLowerCase().includes(input) ? '' : 'none';
       }
     }
+    // Auto-scroll to emails on page load
+document.addEventListener('DOMContentLoaded', function() {
+  // Get the email pair section
+  const emailPairSection = document.querySelector('.email-pair');
+
+  // If found, scroll to it with a small offset
+  if (emailPairSection) {
+    const yOffset = -20; // Small offset to show a bit of context
+    const y = emailPairSection.getBoundingClientRect().top + window.pageYOffset + yOffset;
+
+    // Smooth scroll to position
+    window.scrollTo({
+      top: y,
+      behavior: 'smooth'
+    });
+  }
+});
   </script>
   <style>
     .container {
