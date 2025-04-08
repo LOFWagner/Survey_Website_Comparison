@@ -30,7 +30,7 @@ This application was developed as part of a bachelor's thesis investigating how 
 
 2. Install dependencies:
    ```bash
-   pip install flask
+   pip install -r requirements.txt
    ```
 
 3. Set up the email samples:
