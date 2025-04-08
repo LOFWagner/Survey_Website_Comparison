@@ -5,33 +5,33 @@ import re
 import sqlite3
 
 try:
-    import psycopg2
-    POSTGRES_AVAILABLE = True
+    import pyodbc
+    AZURE_SQL_AVAILABLE = True
 except ImportError:
-    POSTGRES_AVAILABLE = False
+    AZURE_SQL_AVAILABLE = False
 
 from flask import Flask, render_template, request, redirect, url_for, session, send_from_directory
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'  #TODO Replace with a secure secret key
+app.secret_key = os.environ.get('FLASK_SECRET_KEY', '3347b6bfe88c8c74c83f4511a49ecb7d')
 
 # Constants
 EMAILS_DIR = os.path.join(os.getcwd(), 'emails')
 NUM_PAIRS = 10
-DEBUG = True
+DEBUG = False  # Set to False for production
 
 # Database configuration
 DB_CONFIG = {
     'debug': {
         'type': 'sqlite',
-        'path': 'dev_results.db'
+        'path': '/home/gitpod/dev_results.db'
     },
     'production': {
-        'type': 'postgres',
-        'pg_host': os.environ.get('DB_HOST', 'localhost'),
-        'pg_name': os.environ.get('DB_NAME', 'phishing_survey'),
-        'pg_user': os.environ.get('DB_USER', 'postgres'),
-        'pg_pass': os.environ.get('DB_PASSWORD', ''),
-        'pg_port': os.environ.get('DB_PORT', '5432')
+        'type': 'azure_sql',
+        'server': os.environ.get('AZURE_SQL_SERVER', ''),
+        'database': os.environ.get('AZURE_SQL_DATABASE', ''),
+        'username': os.environ.get('AZURE_SQL_USERNAME', ''),
+        'password': os.environ.get('AZURE_SQL_PASSWORD', ''),
+        'driver': '{ODBC Driver 17 for SQL Server}'
     }
 }
 
@@ -42,27 +42,17 @@ def get_db_connection():
         return sqlite3.connect(config['path'])
     else:
         config = DB_CONFIG['production']
-        db_type = config['type'].lower()
-
-        if db_type == 'postgres' and POSTGRES_AVAILABLE:
-            return psycopg2.connect(
-                host=config['pg_host'],
-                database=config['pg_name'],
-                user=config['pg_user'],
-                password=config['pg_pass'],
-                port=config['pg_port']
+        if config['type'] == 'azure_sql' and AZURE_SQL_AVAILABLE:
+            connection_string = (
+                f"DRIVER={config['driver']};"
+                f"SERVER={config['server']};"
+                f"DATABASE={config['database']};"
+                f"UID={config['username']};"
+                f"PWD={config['password']}"
             )
+            return pyodbc.connect(connection_string)
         else:
-            # Ensure directory exists for SQLite DB
-            db_path = config['sqlite_path']
-            db_dir = os.path.dirname(db_path)
-            if db_dir and not os.path.exists(db_dir):
-                try:
-                    os.makedirs(db_dir)
-                except OSError:
-                    # Fall back to local path if directory creation fails
-                    db_path = 'results.db'
-            return sqlite3.connect(db_path)
+            raise Exception("Azure SQL configuration is not available or pyodbc is not installed")
 
 def init_db():
     """Initialize the database with required tables"""
@@ -70,7 +60,7 @@ def init_db():
     c = conn.cursor()
 
     if isinstance(conn, sqlite3.Connection):
-        # SQLite code remains the same
+        # SQLite initialization
         c.execute('''
             CREATE TABLE IF NOT EXISTS responses (
                 response_id TEXT PRIMARY KEY,
@@ -84,23 +74,27 @@ def init_db():
                 demographics_experience TEXT
             )
         ''')
-    else:
-        # PostgreSQL - check if table exists first
-        c.execute("SELECT to_regclass('public.responses')")
-        if c.fetchone()[0] is None:
-            c.execute('''
+    elif 'pyodbc' in str(type(conn)):
+        # Azure SQL Database initialization
+        c.execute("""
+            IF NOT EXISTS (
+                SELECT * FROM INFORMATION_SCHEMA.TABLES 
+                WHERE TABLE_NAME = 'responses'
+            )
+            BEGIN
                 CREATE TABLE responses (
-                    response_id TEXT PRIMARY KEY,
-                    pair_number INTEGER,
-                    email_left TEXT,
-                    email_right TEXT,
-                    selected_email TEXT,
-                    explanation TEXT,
-                    view_time INTEGER,
-                    demographics_age TEXT,
-                    demographics_experience TEXT
+                    response_id NVARCHAR(36) PRIMARY KEY,
+                    pair_number INT,
+                    email_left NVARCHAR(MAX),
+                    email_right NVARCHAR(MAX),
+                    selected_email NVARCHAR(MAX),
+                    explanation NVARCHAR(MAX),
+                    view_time INT,
+                    demographics_age NVARCHAR(50),
+                    demographics_experience NVARCHAR(50)
                 )
-            ''')
+            END
+        """)
 
     conn.commit()
     conn.close()
@@ -179,11 +173,11 @@ def save_response(response):
     # Always generate a unique response ID
     response_id = str(uuid.uuid4())
 
-    # Store participant ID separately if needed
-    participant_id = response.get('participant_id')
-
     # Determine placeholders based on connection type
-    placeholders = '?' if isinstance(conn, sqlite3.Connection) else '%s'
+    if isinstance(conn, sqlite3.Connection) or 'pyodbc' in str(type(conn)):
+        placeholders = '?'
+    else:
+        placeholders = '%s'
 
     # SQL query with appropriate placeholders
     query = f'''
@@ -347,6 +341,8 @@ def export_csv():
     # Get column names
     if isinstance(conn, sqlite3.Connection):
         column_names = [description[0] for description in c.description]
+    elif 'pyodbc' in str(type(conn)):
+        column_names = [column[0] for column in c.description]
     else:
         column_names = [desc[0] for desc in c.description]
 
