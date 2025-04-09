@@ -17,7 +17,7 @@ app.secret_key = os.environ.get('FLASK_SECRET_KEY', '3347b6bfe88c8c74c83f4511a49
 # Constants
 EMAILS_DIR = os.path.join(os.getcwd(), 'emails')
 NUM_PAIRS = 10
-DEBUG = False  # Set to False for production
+DEBUG = True  # Set to False for production
 
 # Database configuration
 DB_CONFIG = {
@@ -121,7 +121,7 @@ def get_email_content(filename):
         pdf_embed = f'''
         <div class="pdf-container" style="position: relative;">
             <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10;"></div>
-            <object data="/{relative_path}#zoom=65" type="application/pdf" width="100%" height="600px">
+            <object data="/{relative_path}#zoom=70" type="application/pdf" width="100%" height="600px">
                 <p>Unable to display PDF.</p>
             </object>
         </div>'''

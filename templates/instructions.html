@@ -8,23 +8,63 @@
     function searchCharacterInfo() {
       let input = document.getElementById('searchInput').value.toLowerCase();
       let info = document.getElementById('characterInfo');
-      let paragraphs = info.getElementsByTagName('p');
-      let lists = info.getElementsByTagName('ul');
+      let elements = info.querySelectorAll('p, li, h2, h3, h4');
 
-      for (let i = 0; i < paragraphs.length; i++) {
-        let text = paragraphs[i].textContent || paragraphs[i].innerText;
-        paragraphs[i].style.display = text.toLowerCase().includes(input) ? '' : 'none';
-      }
-      for (let i = 0; i < lists.length; i++) {
-        let text = lists[i].textContent || lists[i].innerText;
-        lists[i].style.display = text.toLowerCase().includes(input) ? '' : 'none';
-      }
+      // Reset visibility of all sections first
+      let sections = info.querySelectorAll('h2, h3, h4, p, ul');
+      sections.forEach(section => {
+        section.style.display = '';
+      });
+
+      if (input.trim() === '') return; // If search is empty, show everything
+
+      // Track which headers have matching content
+      let matchingHeaders = new Set();
+
+      // First pass: Check which elements match
+      elements.forEach(element => {
+        let text = element.textContent || element.innerText;
+        let matches = text.toLowerCase().includes(input);
+
+        // If this element matches, mark all its parent headers
+        if (matches) {
+          let currentElement = element;
+          while (currentElement) {
+            if (['H2', 'H3', 'H4'].includes(currentElement.tagName)) {
+              matchingHeaders.add(currentElement);
+            }
+            currentElement = currentElement.previousElementSibling;
+          }
+        }
+      });
+
+      // Second pass: Hide non-matching elements
+      sections.forEach(section => {
+        let text = section.textContent || section.innerText;
+        let isHeader = ['H2', 'H3', 'H4'].includes(section.tagName);
+        let matches = text.toLowerCase().includes(input);
+
+        // Keep headers that have matching content beneath them
+        if (isHeader && matchingHeaders.has(section)) {
+          section.style.display = '';
+        }
+        // Keep elements that match the search
+        else if (matches) {
+          section.style.display = '';
+        }
+        // Hide non-matching elements
+        else {
+          section.style.display = 'none';
+        }
+      });
     }
   </script>
   <style>
     .container {
       display: flex;
       flex-direction: column;
+      max-width: 1000px;
+      margin: 0 auto;
     }
     .main-content {
       flex: 1;
@@ -32,8 +72,61 @@
     .character-info {
       margin-top: 20px;
       border: 1px solid #ccc;
-      padding: 10px;
+      padding: 20px;
       background-color: #f9f9f9;
+      border-radius: 5px;
+    }
+    #searchInput {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+    .character-info h2 {
+      color: #2c3e50;
+      border-bottom: 2px solid #3498db;
+      padding-bottom: 5px;
+    }
+    .character-info h3 {
+      color: #2980b9;
+      margin-top: 20px;
+    }
+    .character-info h4 {
+      color: #16a085;
+      margin-top: 15px;
+    }
+    .character-info ul {
+      margin-top: 10px;
+    }
+    .character-info li {
+      margin-bottom: 5px;
+    }
+    .selection-area {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 5px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    button {
+      background-color: #3498db;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-top: 15px;
+    }
+    button:hover {
+      background-color: #2980b9;
+    }
+    .hint {
+      font-style: italic;
+      color: #7f8c8d;
+      font-size: 14px;
     }
   </style>
 </head>
@@ -45,10 +138,14 @@
     <div class="main-content">
       <div class="selection-area">
         <h2>Instructions</h2>
-        <p>You will be shown a series of email pairs displayed side-by-side. For each pair, please select the email you find more trustworthy.</p>
-        <p>You will complete 10 comparisons. For each pair, the time you spend viewing the emails will be recorded.</p>
-        <p>Before proceeding, please read the character information below. You can use the search bar to filter the information.</p>
-        <p>Click the button below to begin.</p>
+        <p>Welcome to our Email Trustworthiness Survey! In this study, you will:</p>
+        <ol>
+          <li>View 10 pairs of emails displayed side-by-side</li>
+          <li>For each pair, select which email you find more trustworthy</li>
+          <li>Complete all comparisons at your own pace</li>
+        </ol>
+        <p>Before starting, please familiarize yourself with the character profile below. This context will help you evaluate the emails.</p>
+        <p class="hint">Tip: Use the search box to quickly find specific information about John Doe or Core KG.</p>
         <form action="{{ url_for('survey') }}" method="get">
           <button type="submit">Start Survey</button>
         </form>
@@ -56,7 +153,8 @@
     </div>
     <div class="character-info" id="characterInfo">
       <h2>Character Information</h2>
-      <input type="text" id="searchInput" onkeyup="searchCharacterInfo()" placeholder="Search for words..">
+      <input type="text" id="searchInput" onkeyup="searchCharacterInfo()" placeholder="Search for information (e.g., 'projects', 'education', 'Munich')">
+
       <h3>Company Profile: Core KG</h3>
       <p><strong>Company Overview:</strong> Core KG is a mid-sized German tech company founded in 2015, specializing in enterprise cloud solutions and digital transformation services. Headquartered in Berlin with offices in Munich and Hamburg, the company employs approximately 250 people across Germany.</p>
       <p><strong>Core Business Areas:</strong></p>
@@ -68,75 +166,66 @@
         <li>Healthcare technology integration</li>
       </ul>
       <p><strong>Company Culture:</strong> Core prides itself on a collaborative work environment with flexible working arrangements, regular innovation workshops, and a strong commitment to work-life balance. The company has been recognized as one of "Germany's Best Employers for Work-Life Balance" for three consecutive years.</p>
-      <h3>Complete Profile Cards (For Study Participants)</h3>
-      <h4>John Doe - HR Benefits Specialist</h4>
-      <p><strong>Personal Background</strong></p>
+
+      <h3>JOHN DOE - HR BENEFITS SPECIALIST</h3>
+
+      <h4>PERSONAL BACKGROUND</h4>
       <ul>
-        <li>Age: 41</li>
-        <li>Location: Munich, Germany (Schwabing district)</li>
-        <li>Education: Bachelor in Human Resource Management, Ludwig-Maximilians-Universität München (2005); HR Management Certificate, IHK München (2007)</li>
-        <li>Family: Divorced, two children (Lukas, 12 and Sophie, 9, shared custody)</li>
-        <li>Hobbies: Marathon running (completed Berlin Marathon 2022), cooking Mediterranean cuisine, volunteering at local food bank, amateur photography</li>
+        <li><strong>Age:</strong> 41</li>
+        <li><strong>Location:</strong> Munich, Germany (Schwabing district)</li>
+        <li><strong>Education:</strong>
+          <ul>
+            <li>Bachelor in Human Resource Management, Ludwig-Maximilians-Universität München (2005)</li>
+            <li>HR Management Certificate, IHK München (2007)</li>
+          </ul>
+        </li>
+        <li><strong>Family:</strong> Divorced, two children (Lukas, 12 and Sophie, 9, shared custody)</li>
+        <li><strong>Hobbies:</strong>
+          <ul>
+            <li>Marathon running (completed Berlin Marathon 2022)</li>
+            <li>Cooking Mediterranean cuisine</li>
+            <li>Volunteering at local food bank</li>
+            <li>Amateur photography</li>
+          </ul>
+        </li>
       </ul>
-      <p><strong>Professional Details</strong></p>
+
+      <h4>PROFESSIONAL DETAILS</h4>
       <ul>
-        <li>Current Position: Senior Benefits Coordinator at Core KG, Munich office (since 2019)</li>
-        <li>Department Size: Team of 5 HR specialists (3 in Munich, 2 in Berlin)</li>
-        <li>Focus Areas: Health benefits, retirement plans, wellness programs, work-life balance initiatives, employee assistance programs</li>
-        <li>Previous Experience: 8 years at AOK as Benefits Analyst, 3 years at Siemens as HR Assistant</li>
-        <li>Certifications: PHR (Professional in Human Resources), CEBS (Certified Employee Benefit Specialist), Mental Health First Aid Certification</li>
-        <li>Languages: German (native), English (proficient), Italian (conversational)</li>
+        <li><strong>Current Position:</strong> Senior Benefits Coordinator at Core KG, Munich office (since 2019)</li>
+        <li><strong>Department Size:</strong> Team of 5 HR specialists (3 in Munich, 2 in Berlin)</li>
+        <li><strong>Focus Areas:</strong>
+          <ul>
+            <li>Health benefits</li>
+            <li>Retirement plans</li>
+            <li>Wellness programs</li>
+            <li>Work-life balance initiatives</li>
+            <li>Employee assistance programs</li>
+          </ul>
+        </li>
+        <li><strong>Previous Experience:</strong>
+          <ul>
+            <li>8 years at AOK as Benefits Analyst</li>
+            <li>3 years at Siemens as HR Assistant</li>
+          </ul>
+        </li>
+        <li><strong>Certifications:</strong>
+          <ul>
+            <li>PHR (Professional in Human Resources)</li>
+            <li>CEBS (Certified Employee Benefit Specialist)</li>
+            <li>Mental Health First Aid Certification</li>
+          </ul>
+        </li>
+        <li><strong>Languages:</strong>
+          <ul>
+            <li>German (native)</li>
+            <li>English (proficient)</li>
+            <li>Italian (conversational)</li>
+          </ul>
+        </li>
       </ul>
-      <p><strong>Current Projects</strong></p>
-      <ul>
-        <li>Implementing new mental health support program (MindWell Initiative with company MindBetterZ)</li>
-        <li>Coordinating annual benefits enrollment (deadline: November 15)</li>
-        <li>Developing employee wellness initiatives including fitness subsidies (Project name: WellSpring)</li>
-        <li>Creating comprehensive benefits information materials in both German and English</li>
-        <li>Organizing monthly wellness workshops (Internal Project name: Zen Cycle)</li>
-        <li>Negotiating improved family support benefits with providers</li>
-      </ul>
-      <p><strong>Professional Goals</strong></p>
-      <ul>
-        <li>Complete Advanced HR Analytics certification by year-end</li>
-        <li>Expand mental health resources for remote employees</li>
-        <li>Improve benefits enrollment participation by 15%</li>
-        <li>Develop comprehensive onboarding benefits package for new hires</li>
-      </ul>
-    </div>
-    <div class="character-info">
-      <h2>Character Information</h2>
-      <h3>Company Profile: Core KG</h3>
-      <p><strong>Company Overview:</strong> Core KG is a mid-sized German tech company founded in 2015, specializing in enterprise cloud solutions and digital transformation services. Headquartered in Berlin with offices in Munich and Hamburg, the company employs approximately 250 people across Germany.</p>
-      <p><strong>Core Business Areas:</strong></p>
-      <ul>
-        <li>Cloud infrastructure optimization</li>
-        <li>Custom enterprise software development</li>
-        <li>Digital workplace solutions</li>
-        <li>Cybersecurity consulting</li>
-        <li>Healthcare technology integration</li>
-      </ul>
-      <p><strong>Company Culture:</strong> Core prides itself on a collaborative work environment with flexible working arrangements, regular innovation workshops, and a strong commitment to work-life balance. The company has been recognized as one of "Germany's Best Employers for Work-Life Balance" for three consecutive years.</p>
-      <h3>Complete Profile Cards (For Study Participants)</h3>
-      <h4>John Doe - HR Benefits Specialist</h4>
-      <p><strong>Personal Background</strong></p>
-      <ul>
-        <li>Age: 41</li>
-        <li>Location: Munich, Germany (Schwabing district)</li>
-        <li>Education: Bachelor in Human Resource Management, Ludwig-Maximilians-Universität München (2005); HR Management Certificate, IHK München (2007)</li>
-        <li>Family: Divorced, two children (Lukas, 12 and Sophie, 9, shared custody)</li>
-        <li>Hobbies: Marathon running (completed Berlin Marathon 2022), cooking Mediterranean cuisine, volunteering at local food bank, amateur photography</li>
-      </ul>
-      <p><strong>Professional Details</strong></p>
-      <ul>
-        <li>Current Position: Senior Benefits Coordinator at Core KG, Munich office (since 2019)</li>
-        <li>Department Size: Team of 5 HR specialists (3 in Munich, 2 in Berlin)</li>
-        <li>Focus Areas: Health benefits, retirement plans, wellness programs, work-life balance initiatives, employee assistance programs</li>
-        <li>Previous Experience: 8 years at AOK as Benefits Analyst, 3 years at Siemens as HR Assistant</li>
-        <li>Certifications: PHR (Professional in Human Resources), CEBS (Certified Employee Benefit Specialist), Mental Health First Aid Certification</li>
-        <li>Languages: German (native), English (proficient), Italian (conversational)</li>
-      </ul>
-      <p><strong>Current Projects</strong></p>
+
+      <h4>CURRENT PROJECTS</h4>
       <ul>
         <li>Implementing new mental health support program (MindWell Initiative with company MindBetterZ)</li>
         <li>Coordinating annual benefits enrollment (deadline: November 15)</li>
@@ -145,7 +234,17 @@
         <li>Organizing monthly wellness workshops (Internal Project name: Zen Cycle)</li>
         <li>Negotiating improved family support benefits with providers</li>
       </ul>
-      <p><strong>Professional Goals</strong></p>
+
+      <h4>PERSONAL CONNECTIONS</h4>
+      <ul>
+        <li><strong>Lisa Wagner:</strong> HR Manager at Core KG; close collaborator on wellness programs and benefits enrollment</li>
+        <li><strong>Michael Schneider:</strong> Senior HR Consultant at Deloitte; university classmate</li>
+        <li><strong>Sophie Becker:</strong> Talent Acquisition Specialist at Siemens; former colleague</li>
+        <li><strong>Anna Müller:</strong> Regional Sales Manager at MindBetterZ; collaborator on workplace mental health</li>
+        <li><strong>Thomas Fischer:</strong> Director of Employee Wellness at Allianz; regular contact for corporate health management</li>
+      </ul>
+
+      <h4>PROFESSIONAL GOALS</h4>
       <ul>
         <li>Complete Advanced HR Analytics certification by year-end</li>
         <li>Expand mental health resources for remote employees</li>
