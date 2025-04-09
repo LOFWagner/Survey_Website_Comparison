@@ -30,7 +30,7 @@ This application was developed as part of a bachelor's thesis investigating how 
 
 2. Install dependencies:
    ```bash
-   pip install flask
+   pip install -r requirements.txt
    ```
 
 3. Set up the email samples:
@@ -60,7 +60,7 @@ This application was developed as part of a bachelor's thesis investigating how 
 
 - Edit `app.py` to modify the number of pairs shown (`NUM_PAIRS`)
 - Change the secret key in `app.secret_key` for production use
-- Results are stored in `results.csv` in the project root directory
+- Results are stored in either local sql file or sql database
 
 ## Data Collection
 
