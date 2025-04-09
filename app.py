@@ -71,7 +71,11 @@ def init_db():
                 explanation TEXT,
                 view_time INTEGER,
                 demographics_age TEXT,
-                demographics_experience TEXT
+                demographics_experience TEXT,
+                email_left_source TEXT,
+                email_left_principle TEXT,
+                email_right_source TEXT,
+                email_right_principle TEXT
             )
         ''')
     elif 'pyodbc' in str(type(conn)):
@@ -91,7 +95,11 @@ def init_db():
                     explanation NVARCHAR(MAX),
                     view_time INT,
                     demographics_age NVARCHAR(50),
-                    demographics_experience NVARCHAR(50)
+                    demographics_experience NVARCHAR(50),
+                    email_left_source NVARCHAR(50),
+                    email_left_principle NVARCHAR(50),
+                    email_right_source NVARCHAR(50),
+                    email_right_principle NVARCHAR(50)
                 )
             END
         """)
@@ -155,6 +163,34 @@ def generate_random_pairs():
 
     return pairs
 
+
+def extract_email_type_info(filename):
+    """Extract source type and psychological principle from email filename."""
+    # Regular emails
+    if filename.startswith('regular_'):
+        return 'regular', None
+
+    # AI-generated phishing
+    if filename.startswith('ai_'):
+        source = 'ai'
+        remainder = filename[3:]  # Remove 'ai_'
+    # Standard phishing template
+    elif filename.startswith('phish_'):
+        source = 'phish'
+        remainder = filename[6:]  # Remove 'phish_'
+    else:
+        return None, None
+
+    # Check if remainder starts with 'social_proof_'
+    if remainder.startswith('social_proof_'):
+        principle = 'social_proof'
+    else:
+        # For other principles, get the text before the next underscore
+        parts = remainder.split('_', 1)
+        principle = parts[0] if parts else None
+
+    return source, principle
+
 def extract_email_content(html_content):
     """Extract the email container content without the surrounding HTML structure."""
     # Extract just the email-container div and its contents
@@ -165,6 +201,7 @@ def extract_email_content(html_content):
         # Fallback if the expected structure isn't found
         return html_content
 
+
 def save_response(response):
     """Save survey response to database"""
     conn = get_db_connection()
@@ -172,6 +209,10 @@ def save_response(response):
 
     # Always generate a unique response ID
     response_id = str(uuid.uuid4())
+
+    # Extract source and principle for both emails
+    email_left_source, email_left_principle = extract_email_type_info(response['email_left'])
+    email_right_source, email_right_principle = extract_email_type_info(response['email_right'])
 
     # Determine placeholders based on connection type
     if isinstance(conn, sqlite3.Connection) or 'pyodbc' in str(type(conn)):
@@ -184,9 +225,11 @@ def save_response(response):
         INSERT INTO responses (
             response_id, pair_number, email_left, email_right,
             selected_email, explanation, view_time,
-            demographics_age, demographics_experience
+            demographics_age, demographics_experience,
+            email_left_source, email_left_principle,
+            email_right_source, email_right_principle
         )
-        VALUES ({', '.join([placeholders] * 9)})
+        VALUES ({', '.join([placeholders] * 13)})
     '''
 
     # Ensure the order of values matches the column order
@@ -199,7 +242,11 @@ def save_response(response):
         response['explanation'],
         response['view_time'],
         response.get('demographics_age', ''),
-        response.get('demographics_experience', '')  # Using the correct key format now
+        response.get('demographics_experience', ''),
+        email_left_source,
+        email_left_principle,
+        email_right_source,
+        email_right_principle
     ))
 
     conn.commit()
