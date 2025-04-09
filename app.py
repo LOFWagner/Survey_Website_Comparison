@@ -23,7 +23,7 @@ DEBUG = True  # Set to False for production
 DB_CONFIG = {
     'debug': {
         'type': 'sqlite',
-        'path': '/home/gitpod/dev_results.db'
+        'path': 'dev_results.db'
     },
     'production': {
         'type': 'azure_sql',
@@ -121,7 +121,7 @@ def get_email_content(filename):
         pdf_embed = f'''
         <div class="pdf-container" style="position: relative;">
             <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10;"></div>
-            <object data="/{relative_path}#zoom=70" type="application/pdf" width="100%" height="600px">
+            <object data="/{relative_path}#zoom=65" type="application/pdf" width="100%" height="600px">
                 <p>Unable to display PDF.</p>
             </object>
         </div>'''
@@ -189,7 +189,7 @@ def save_response(response):
         VALUES ({', '.join([placeholders] * 9)})
     '''
 
-    # Execute with parameters
+    # Ensure the order of values matches the column order
     c.execute(query, (
         response_id,
         response['pair_number'],
@@ -199,7 +199,7 @@ def save_response(response):
         response['explanation'],
         response['view_time'],
         response.get('demographics_age', ''),
-        response.get('demographics_experience', '')
+        response.get('demographics_experience', '')  # Using the correct key format now
     ))
 
     conn.commit()
