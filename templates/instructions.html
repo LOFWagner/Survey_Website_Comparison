@@ -211,6 +211,63 @@
       color: #7f8c8d;
       font-size: 14px;
     }
+    .feature-hint {
+      background-color: #f1f9fe;
+      border-left: 4px solid #3498db;
+      padding: 10px 15px;
+      margin: 15px 0;
+      font-size: 15px;
+    }
+    .clickable-demo {
+      display: flex;
+      align-items: center;
+      margin-top: 10px;
+    }
+    .demo-email {
+      border: 2px dashed #3498db;
+      padding: 8px 12px;
+      border-radius: 5px;
+      background-color: #f8f9fa;
+      cursor: pointer;
+      font-size: 14px;
+      margin-right: 15px;
+      position: relative;
+    }
+    .demo-email:after {
+      content: "👆";
+      position: absolute;
+      top: -20px;
+      right: 5px;
+      font-size: 18px;
+    }
+    .demo-arrow {
+      font-size: 20px;
+      margin: 0 10px;
+      color: #7f8c8d;
+    }
+    .demo-selected {
+      border: 2px solid #2ecc71;
+      background-color: #f0fff0;
+      padding: 8px 12px;
+      border-radius: 5px;
+      font-size: 14px;
+      position: relative;
+    }
+    .demo-selected:before {
+      content: "✓";
+      position: absolute;
+      top: -2px;
+      right: 5px;
+      background-color: #2ecc71;
+      color: white;
+      font-size: 12px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
   </style>
 </head>
 <body>
@@ -224,9 +281,20 @@
         <p>Welcome to our Email Trustworthiness Survey! In this study, you will:</p>
         <ol>
           <li>View 10 pairs of emails displayed side-by-side</li>
-          <li>For each pair, select which email you find more trustworthy</li>
+          <li><strong>Select which email you find more trustworthy by clicking directly on the email itself</strong> or using the radio buttons below</li>
           <li>Complete all comparisons at your own pace</li>
         </ol>
+
+        <div class="feature-hint">
+          <strong>Quick Tip:</strong> You can click anywhere on an email (including PDFs) to select it. The selected email will be highlighted and the page will automatically scroll to the question section.
+
+          <div class="clickable-demo">
+            <div class="demo-email">Email content...</div>
+            <div class="demo-arrow">→</div>
+            <div class="demo-selected">Email content...</div>
+          </div>
+        </div>
+
         <p>Before starting, please familiarize yourself with the character profile below. This context will help you evaluate the emails.</p>
         <p class="hint">Tip: Use the search box to quickly find specific information about John Doe or Core KG.</p>
         <form action="{{ url_for('survey') }}" method="get">
