@@ -6,141 +6,177 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <script>
     function searchCharacterInfo() {
-  const input = document.getElementById('searchInput').value.toLowerCase().trim();
-  const info = document.getElementById('characterInfo');
+      const input = document.getElementById('searchInput').value.toLowerCase().trim();
+      const info = document.getElementById('characterInfo');
 
-  // If search is empty, show everything
-  if (input === '') {
-    info.querySelectorAll('h2, h3, h4, p, ul, li').forEach(el => {
-      el.style.display = '';
-    });
-    return;
-  }
+      // If search is empty, show everything
+      if (input === '') {
+        info.querySelectorAll('h2, h3, h4, p, ul, li').forEach(el => {
+          el.style.display = '';
+        });
+        return;
+      }
 
-  // First, hide all elements
-  info.querySelectorAll('h2, h3, h4, p, ul, li').forEach(el => {
-    el.style.display = 'none';
-  });
+      // First, hide all elements
+      info.querySelectorAll('h2, h3, h4, p, ul, li').forEach(el => {
+        el.style.display = 'none';
+      });
 
-  // Always show the main header and search input
-  document.getElementById('searchInput').style.display = '';
-  info.querySelector('h2').style.display = '';
+      // Always show the main header and search input
+      document.getElementById('searchInput').style.display = '';
+      info.querySelector('h2').style.display = '';
 
-  // Find all matching headers first
-  const matchingHeaders = Array.from(info.querySelectorAll('h3, h4')).filter(header =>
-    header.textContent.toLowerCase().includes(input)
-  );
+      // Find all matching headers first
+      const matchingHeaders = Array.from(info.querySelectorAll('h3, h4')).filter(header =>
+        header.textContent.toLowerCase().includes(input)
+      );
 
-  // Find all elements containing the search input
-  const matchingElements = Array.from(info.querySelectorAll('p, li')).filter(el =>
-    el.textContent.toLowerCase().includes(input)
-  );
+      // Find all elements containing the search input
+      const matchingElements = Array.from(info.querySelectorAll('p, li')).filter(el =>
+        el.textContent.toLowerCase().includes(input)
+      );
 
-  // Show matching headers and ALL their content
-  matchingHeaders.forEach(header => {
-    // Show the header
-    header.style.display = '';
+      // Show matching headers and ALL their content
+      matchingHeaders.forEach(header => {
+        // Show the header
+        header.style.display = '';
 
-    // Determine the level of the current header (3 or 4)
-    const currentLevel = parseInt(header.tagName.charAt(1));
+        // Determine the level of the current header (3 or 4)
+        const currentLevel = parseInt(header.tagName.charAt(1));
 
-    // Show all content until we hit another header of same or higher level
-    let nextEl = header.nextElementSibling;
-    while (nextEl &&
-           !(nextEl.tagName === 'H3' ||
-             (nextEl.tagName === 'H4' && currentLevel === 4))) {
-      nextEl.style.display = '';
-      // Ensure any nested children are also displayed
-      if (nextEl.children) {
-        Array.from(nextEl.children).forEach(child => {
-          child.style.display = '';
-          // Handle nested lists
-          if (child.tagName === 'UL' || child.tagName === 'OL') {
-            child.querySelectorAll('li').forEach(li => {
+        // Show all content until we hit another header of same or higher level
+        let nextEl = header.nextElementSibling;
+        while (nextEl &&
+               !(nextEl.tagName === 'H3' ||
+                 (nextEl.tagName === 'H4' && currentLevel === 4))) {
+          nextEl.style.display = '';
+          // Ensure any nested children are also displayed
+          if (nextEl.children) {
+            Array.from(nextEl.children).forEach(child => {
+              child.style.display = '';
+              // Handle nested lists
+              if (child.tagName === 'UL' || child.tagName === 'OL') {
+                child.querySelectorAll('li').forEach(li => {
+                  li.style.display = '';
+                });
+              }
+            });
+          }
+          nextEl = nextEl.nextElementSibling;
+        }
+
+        // If this is an H4, also show its parent H3
+        if (header.tagName === 'H4') {
+          let prevEl = header.previousElementSibling;
+          while (prevEl) {
+            if (prevEl.tagName === 'H3') {
+              prevEl.style.display = '';
+              break;
+            }
+            prevEl = prevEl.previousElementSibling;
+          }
+        }
+      });
+
+      // For each matching text element, make it and its context visible
+      matchingElements.forEach(el => {
+        // Show the element itself
+        el.style.display = '';
+
+        // Show all parent elements
+        let parent = el.parentElement;
+        while (parent && parent !== info) {
+          parent.style.display = '';
+
+          // If a parent is a list, make all list items visible
+          if (parent.tagName === 'UL' || parent.tagName === 'OL') {
+            parent.querySelectorAll('li').forEach(li => {
               li.style.display = '';
             });
           }
-        });
-      }
-      nextEl = nextEl.nextElementSibling;
-    }
 
-    // If this is an H4, also show its parent H3
-    if (header.tagName === 'H4') {
-      let prevEl = header.previousElementSibling;
-      while (prevEl) {
-        if (prevEl.tagName === 'H3') {
-          prevEl.style.display = '';
-          break;
+          parent = parent.parentElement;
         }
-        prevEl = prevEl.previousElementSibling;
-      }
-    }
-  });
 
-  // For each matching text element, make it and its context visible
-  matchingElements.forEach(el => {
-    // Show the element itself
-    el.style.display = '';
+        // Find and show the nearest section header
+        let currentEl = el;
+        while (currentEl && currentEl !== info) {
+          let header = null;
+          let sibling = currentEl.previousElementSibling;
 
-    // Show all parent elements
-    let parent = el.parentElement;
-    while (parent && parent !== info) {
-      parent.style.display = '';
+          while (sibling && !header) {
+            if (['H3', 'H4'].includes(sibling.tagName)) {
+              header = sibling;
+              header.style.display = '';
 
-      // If a parent is a list, make all list items visible
-      if (parent.tagName === 'UL' || parent.tagName === 'OL') {
-        parent.querySelectorAll('li').forEach(li => {
-          li.style.display = '';
-        });
-      }
-
-      parent = parent.parentElement;
-    }
-
-    // Find and show the nearest section header
-    let currentEl = el;
-    while (currentEl && currentEl !== info) {
-      let header = null;
-      let sibling = currentEl.previousElementSibling;
-
-      while (sibling && !header) {
-        if (['H3', 'H4'].includes(sibling.tagName)) {
-          header = sibling;
-          header.style.display = '';
-
-          // If this is an H4, also show its parent H3
-          if (header.tagName === 'H4') {
-            let prevEl = header.previousElementSibling;
-            while (prevEl) {
-              if (prevEl.tagName === 'H3') {
-                prevEl.style.display = '';
-                break;
+              // If this is an H4, also show its parent H3
+              if (header.tagName === 'H4') {
+                let prevEl = header.previousElementSibling;
+                while (prevEl) {
+                  if (prevEl.tagName === 'H3') {
+                    prevEl.style.display = '';
+                    break;
+                  }
+                  prevEl = prevEl.previousElementSibling;
+                }
               }
-              prevEl = prevEl.previousElementSibling;
+              break;
             }
+            sibling = sibling.previousElementSibling;
           }
-          break;
+
+          if (header) break;
+          currentEl = currentEl.parentElement;
         }
-        sibling = sibling.previousElementSibling;
-      }
+      });
 
-      if (header) break;
-      currentEl = currentEl.parentElement;
-    }
-  });
-
-  // Final pass to ensure all list items within visible lists are shown
-  info.querySelectorAll('ul, ol').forEach(list => {
-    if (list.style.display !== 'none') {
-      list.querySelectorAll('li').forEach(li => {
-        li.style.display = '';
+      // Final pass to ensure all list items within visible lists are shown
+      info.querySelectorAll('ul, ol').forEach(list => {
+        if (list.style.display !== 'none') {
+          list.querySelectorAll('li').forEach(li => {
+            li.style.display = '';
+          });
+        }
       });
     }
-  });
-}
 
+    // Add scroll-detection functionality
+    document.addEventListener('DOMContentLoaded', function() {
+      const startButton = document.getElementById('startSurveyButton');
+      const characterInfo = document.getElementById('characterInfo');
 
+      // Initially disable the button
+      startButton.disabled = true;
+      startButton.classList.add('button-disabled');
+
+      // Check if user has scrolled to the bottom
+      function checkScrollPosition() {
+        // Get the bottom of the viewport
+        const viewportBottom = window.scrollY + window.innerHeight;
+        // Get the bottom position of the character info section
+        const characterInfoBottom = characterInfo.offsetTop + characterInfo.offsetHeight;
+
+        // If user has scrolled to or past the bottom of the character info
+        if (viewportBottom >= characterInfoBottom) {
+          startButton.disabled = false;
+          startButton.classList.remove('button-disabled');
+          startButton.classList.add('button-enabled');
+
+          // Show confirmation message
+          const confirmationMsg = document.getElementById('scrollConfirmation');
+          confirmationMsg.style.display = 'block';
+
+          // Remove scroll listener once enabled
+          window.removeEventListener('scroll', checkScrollPosition);
+        }
+      }
+
+      // Add scroll event listener
+      window.addEventListener('scroll', checkScrollPosition);
+
+      // Check initial position (in case content is short)
+      checkScrollPosition();
+    });
   </script>
   <style>
     .container {
@@ -202,6 +238,8 @@
       cursor: pointer;
       font-size: 16px;
       margin-top: 15px;
+      position: relative;
+      transition: all 0.3s ease;
     }
     button:hover {
       background-color: #2980b9;
@@ -268,6 +306,70 @@
       align-items: center;
       justify-content: center;
     }
+
+    /* New styles for button states */
+    .button-disabled {
+      background-color: #ccc !important;
+      cursor: not-allowed !important;
+      opacity: 0.7;
+    }
+
+    .button-disabled:hover::after {
+      content: "Please scroll through all character information first";
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #333;
+      color: white;
+      padding: 8px 10px;
+      border-radius: 4px;
+      white-space: nowrap;
+      margin-bottom: 10px;
+      font-size: 14px;
+      font-weight: normal;
+      z-index: 100;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+
+    .button-disabled:hover::before {
+      content: '';
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 8px solid transparent;
+      border-top-color: #333;
+      margin-bottom: 2px;
+    }
+
+    .button-enabled {
+      background-color: #3498db;
+      box-shadow: 0 0 10px rgba(52, 152, 219, 0.5);
+      animation: buttonEnable 0.5s ease;
+    }
+
+    .scroll-confirmation {
+      display: none;
+      background-color: #dff0d8;
+      color: #3c763d;
+      padding: 10px 15px;
+      border-radius: 4px;
+      margin: 15px 0;
+      border-left: 4px solid #5cb85c;
+      animation: fadeIn 0.5s;
+    }
+
+    @keyframes buttonEnable {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
   </style>
 </head>
 <body>
@@ -281,7 +383,7 @@
         <p>Welcome to our Email Trustworthiness Survey! In this study, you will:</p>
         <ol>
           <li>View 10 pairs of emails displayed side-by-side</li>
-          <li><strong>Select which email you find more trustworthy by clicking directly on the email itself</strong> or using the radio buttons below</li>
+          <li><strong>Select which email you find more suspicious by clicking directly on the email itself</strong> or using the radio buttons below</li>
           <li>Complete all comparisons at your own pace</li>
         </ol>
 
@@ -297,8 +399,13 @@
 
         <p>Before starting, please familiarize yourself with the character profile below. This context will help you evaluate the emails.</p>
         <p class="hint">Tip: Use the search box to quickly find specific information about John Doe or Core KG.</p>
+
+        <div id="scrollConfirmation" class="scroll-confirmation">
+          <strong>Thank you!</strong> You've reviewed the character information. You can now start the survey.
+        </div>
+
         <form action="{{ url_for('survey') }}" method="get">
-          <button type="submit">Start Survey</button>
+          <button type="submit" id="startSurveyButton" class="button-disabled">Start Survey</button>
         </form>
       </div>
     </div>
