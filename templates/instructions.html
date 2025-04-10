@@ -6,58 +6,141 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <script>
     function searchCharacterInfo() {
-      let input = document.getElementById('searchInput').value.toLowerCase();
-      let info = document.getElementById('characterInfo');
-      let elements = info.querySelectorAll('p, li, h2, h3, h4');
+  const input = document.getElementById('searchInput').value.toLowerCase().trim();
+  const info = document.getElementById('characterInfo');
 
-      // Reset visibility of all sections first
-      let sections = info.querySelectorAll('h2, h3, h4, p, ul');
-      sections.forEach(section => {
-        section.style.display = '';
-      });
+  // If search is empty, show everything
+  if (input === '') {
+    info.querySelectorAll('h2, h3, h4, p, ul, li').forEach(el => {
+      el.style.display = '';
+    });
+    return;
+  }
 
-      if (input.trim() === '') return; // If search is empty, show everything
+  // First, hide all elements
+  info.querySelectorAll('h2, h3, h4, p, ul, li').forEach(el => {
+    el.style.display = 'none';
+  });
 
-      // Track which headers have matching content
-      let matchingHeaders = new Set();
+  // Always show the main header and search input
+  document.getElementById('searchInput').style.display = '';
+  info.querySelector('h2').style.display = '';
 
-      // First pass: Check which elements match
-      elements.forEach(element => {
-        let text = element.textContent || element.innerText;
-        let matches = text.toLowerCase().includes(input);
+  // Find all matching headers first
+  const matchingHeaders = Array.from(info.querySelectorAll('h3, h4')).filter(header =>
+    header.textContent.toLowerCase().includes(input)
+  );
 
-        // If this element matches, mark all its parent headers
-        if (matches) {
-          let currentElement = element;
-          while (currentElement) {
-            if (['H2', 'H3', 'H4'].includes(currentElement.tagName)) {
-              matchingHeaders.add(currentElement);
-            }
-            currentElement = currentElement.previousElementSibling;
+  // Find all elements containing the search input
+  const matchingElements = Array.from(info.querySelectorAll('p, li')).filter(el =>
+    el.textContent.toLowerCase().includes(input)
+  );
+
+  // Show matching headers and ALL their content
+  matchingHeaders.forEach(header => {
+    // Show the header
+    header.style.display = '';
+
+    // Determine the level of the current header (3 or 4)
+    const currentLevel = parseInt(header.tagName.charAt(1));
+
+    // Show all content until we hit another header of same or higher level
+    let nextEl = header.nextElementSibling;
+    while (nextEl &&
+           !(nextEl.tagName === 'H3' ||
+             (nextEl.tagName === 'H4' && currentLevel === 4))) {
+      nextEl.style.display = '';
+      // Ensure any nested children are also displayed
+      if (nextEl.children) {
+        Array.from(nextEl.children).forEach(child => {
+          child.style.display = '';
+          // Handle nested lists
+          if (child.tagName === 'UL' || child.tagName === 'OL') {
+            child.querySelectorAll('li').forEach(li => {
+              li.style.display = '';
+            });
           }
-        }
-      });
+        });
+      }
+      nextEl = nextEl.nextElementSibling;
+    }
 
-      // Second pass: Hide non-matching elements
-      sections.forEach(section => {
-        let text = section.textContent || section.innerText;
-        let isHeader = ['H2', 'H3', 'H4'].includes(section.tagName);
-        let matches = text.toLowerCase().includes(input);
+    // If this is an H4, also show its parent H3
+    if (header.tagName === 'H4') {
+      let prevEl = header.previousElementSibling;
+      while (prevEl) {
+        if (prevEl.tagName === 'H3') {
+          prevEl.style.display = '';
+          break;
+        }
+        prevEl = prevEl.previousElementSibling;
+      }
+    }
+  });
 
-        // Keep headers that have matching content beneath them
-        if (isHeader && matchingHeaders.has(section)) {
-          section.style.display = '';
+  // For each matching text element, make it and its context visible
+  matchingElements.forEach(el => {
+    // Show the element itself
+    el.style.display = '';
+
+    // Show all parent elements
+    let parent = el.parentElement;
+    while (parent && parent !== info) {
+      parent.style.display = '';
+
+      // If a parent is a list, make all list items visible
+      if (parent.tagName === 'UL' || parent.tagName === 'OL') {
+        parent.querySelectorAll('li').forEach(li => {
+          li.style.display = '';
+        });
+      }
+
+      parent = parent.parentElement;
+    }
+
+    // Find and show the nearest section header
+    let currentEl = el;
+    while (currentEl && currentEl !== info) {
+      let header = null;
+      let sibling = currentEl.previousElementSibling;
+
+      while (sibling && !header) {
+        if (['H3', 'H4'].includes(sibling.tagName)) {
+          header = sibling;
+          header.style.display = '';
+
+          // If this is an H4, also show its parent H3
+          if (header.tagName === 'H4') {
+            let prevEl = header.previousElementSibling;
+            while (prevEl) {
+              if (prevEl.tagName === 'H3') {
+                prevEl.style.display = '';
+                break;
+              }
+              prevEl = prevEl.previousElementSibling;
+            }
+          }
+          break;
         }
-        // Keep elements that match the search
-        else if (matches) {
-          section.style.display = '';
-        }
-        // Hide non-matching elements
-        else {
-          section.style.display = 'none';
-        }
+        sibling = sibling.previousElementSibling;
+      }
+
+      if (header) break;
+      currentEl = currentEl.parentElement;
+    }
+  });
+
+  // Final pass to ensure all list items within visible lists are shown
+  info.querySelectorAll('ul, ol').forEach(list => {
+    if (list.style.display !== 'none') {
+      list.querySelectorAll('li').forEach(li => {
+        li.style.display = '';
       });
     }
+  });
+}
+
+
   </script>
   <style>
     .container {

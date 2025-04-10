@@ -14,40 +14,192 @@
       return true;
     }
 
-    // Search function
+    // Improved search function
     function searchCharacterInfo() {
-      let input = document.getElementById('searchInput').value.toLowerCase();
-      let info = document.getElementById('characterInfo');
-      let paragraphs = info.getElementsByTagName('p');
-      let lists = info.getElementsByTagName('ul');
+      const input = document.getElementById('searchInput').value.toLowerCase().trim();
+      const info = document.getElementById('characterInfo');
 
-      // Loop through all paragraphs and lists, and hide those that don't match the search query
-      for (let i = 0; i < paragraphs.length; i++) {
-        let text = paragraphs[i].textContent || paragraphs[i].innerText;
-        paragraphs[i].style.display = text.toLowerCase().includes(input) ? '' : 'none';
+      // If search is empty, show everything
+      if (input === '') {
+        info.querySelectorAll('h2, h3, h4, p, ul, li').forEach(el => {
+          el.style.display = '';
+        });
+        return;
       }
-      for (let i = 0; i < lists.length; i++) {
-        let text = lists[i].textContent || lists[i].innerText;
-        lists[i].style.display = text.toLowerCase().includes(input) ? '' : 'none';
-      }
+
+      // First, hide all elements
+      info.querySelectorAll('h2, h3, h4, p, ul, li').forEach(el => {
+        el.style.display = 'none';
+      });
+
+      // Always show the main header and search input
+      document.getElementById('searchInput').style.display = '';
+      info.querySelector('h2').style.display = '';
+
+      // Find all matching headers first
+      const matchingHeaders = Array.from(info.querySelectorAll('h3, h4')).filter(header =>
+        header.textContent.toLowerCase().includes(input)
+      );
+
+      // Find all elements containing the search input
+      const matchingElements = Array.from(info.querySelectorAll('p, li')).filter(el =>
+        el.textContent.toLowerCase().includes(input)
+      );
+
+      // Show matching headers and ALL their content
+      matchingHeaders.forEach(header => {
+        // Show the header
+        header.style.display = '';
+
+        // Determine the level of the current header (3 or 4)
+        const currentLevel = parseInt(header.tagName.charAt(1));
+
+        // Show all content until we hit another header of same or higher level
+        let nextEl = header.nextElementSibling;
+        while (nextEl &&
+               !(nextEl.tagName === 'H3' ||
+                 (nextEl.tagName === 'H4' && currentLevel === 4))) {
+          nextEl.style.display = '';
+          // Ensure any nested children are also displayed
+          if (nextEl.children) {
+            Array.from(nextEl.children).forEach(child => {
+              child.style.display = '';
+              // Handle nested lists
+              if (child.tagName === 'UL' || child.tagName === 'OL') {
+                child.querySelectorAll('li').forEach(li => {
+                  li.style.display = '';
+                });
+              }
+            });
+          }
+          nextEl = nextEl.nextElementSibling;
+        }
+
+        // If this is an H4, also show its parent H3
+        if (header.tagName === 'H4') {
+          let prevEl = header.previousElementSibling;
+          while (prevEl) {
+            if (prevEl.tagName === 'H3') {
+              prevEl.style.display = '';
+              break;
+            }
+            prevEl = prevEl.previousElementSibling;
+          }
+        }
+      });
+
+      // For each matching text element, make it and its context visible
+      matchingElements.forEach(el => {
+        // Show the element itself
+        el.style.display = '';
+
+        // Show all parent elements
+        let parent = el.parentElement;
+        while (parent && parent !== info) {
+          parent.style.display = '';
+
+          // If a parent is a list, make all list items visible
+          if (parent.tagName === 'UL' || parent.tagName === 'OL') {
+            parent.querySelectorAll('li').forEach(li => {
+              li.style.display = '';
+            });
+          }
+
+          parent = parent.parentElement;
+        }
+
+        // Find and show the nearest section header
+        let currentEl = el;
+        while (currentEl && currentEl !== info) {
+          let header = null;
+          let sibling = currentEl.previousElementSibling;
+
+          while (sibling && !header) {
+            if (['H3', 'H4'].includes(sibling.tagName)) {
+              header = sibling;
+              header.style.display = '';
+
+              // If this is an H4, also show its parent H3
+              if (header.tagName === 'H4') {
+                let prevEl = header.previousElementSibling;
+                while (prevEl) {
+                  if (prevEl.tagName === 'H3') {
+                    prevEl.style.display = '';
+                    break;
+                  }
+                  prevEl = prevEl.previousElementSibling;
+                }
+              }
+              break;
+            }
+            sibling = sibling.previousElementSibling;
+          }
+
+          if (header) break;
+          currentEl = currentEl.parentElement;
+        }
+      });
+
+      // Final pass to ensure all list items within visible lists are shown
+      info.querySelectorAll('ul, ol').forEach(list => {
+        if (list.style.display !== 'none') {
+          list.querySelectorAll('li').forEach(li => {
+            li.style.display = '';
+          });
+        }
+      });
     }
-    // Auto-scroll to emails on page load
-document.addEventListener('DOMContentLoaded', function() {
-  // Get the email pair section
-  const emailPairSection = document.querySelector('.email-pair');
 
-  // If found, scroll to it with a small offset
-  if (emailPairSection) {
-    const yOffset = -20; // Small offset to show a bit of context
-    const y = emailPairSection.getBoundingClientRect().top + window.pageYOffset + yOffset;
+    // Function to select an email when clicked
+    function selectEmail(side) {
+      // Find the radio button for this side and select it
+      document.querySelector(`input[name="selected_email"][value="${side}"]`).checked = true;
 
-    // Smooth scroll to position
-    window.scrollTo({
-      top: y,
-      behavior: 'smooth'
-    });
-  }
-});
+      // Remove highlight from both columns and selected class from radio options
+      document.querySelectorAll('.email-column').forEach(column => {
+        column.classList.remove('selected-email');
+      });
+      document.querySelectorAll('.radio-option').forEach(opt => {
+        opt.classList.remove('selected');
+      });
+
+      // Add highlight to the selected column
+      const selectedColumn = document.querySelector(`.email-column[data-side="${side}"]`);
+      if (selectedColumn) {
+        selectedColumn.classList.add('selected-email');
+
+        // Add a selection indicator
+        if (!selectedColumn.querySelector('.selection-indicator')) {
+          const indicator = document.createElement('div');
+          indicator.className = 'selection-indicator';
+          indicator.innerHTML = '✓ SELECTED';
+          selectedColumn.querySelector('.email-header').appendChild(indicator);
+        }
+
+        // Remove indicators from the other column
+        document.querySelectorAll(`.email-column:not([data-side="${side}"]) .selection-indicator`).forEach(el => {
+          el.remove();
+        });
+      }
+
+      // Add selected class to the corresponding radio option
+      document.querySelector(`.radio-option input[value="${side}"]`).parentNode.classList.add('selected');
+
+      // Scroll to the question section
+      const questionHeading = document.querySelector('.selection-area h3');
+      // Use a timeout to ensure the DOM updates before scrolling
+      setTimeout(() => {
+        // Calculate position to scroll to (keeping part of the emails visible)
+        const windowHeight = window.innerHeight;
+        const headingRect = questionHeading.getBoundingClientRect();
+        const targetPosition = window.pageYOffset + headingRect.top - (windowHeight * 0.3);
+
+        window.scrollTo({
+          top: targetPosition,
+          behavior: 'smooth'
+        });
+      }, 100);
+    }
   </script>
   <style>
     .container {
@@ -62,6 +214,148 @@ document.addEventListener('DOMContentLoaded', function() {
       border: 1px solid #ccc;
       padding: 10px;
       background-color: #f9f9f9;
+      border-radius: 5px;
+    }
+    #searchInput {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+    .character-info h2 {
+      color: #2c3e50;
+      border-bottom: 2px solid #3498db;
+      padding-bottom: 5px;
+    }
+    .character-info h3 {
+      color: #2980b9;
+      margin-top: 20px;
+    }
+    .character-info h4 {
+      color: #16a085;
+      margin-top: 15px;
+    }
+    .character-info ul {
+      margin-top: 10px;
+    }
+    .character-info li {
+      margin-bottom: 5px;
+    }
+    /* Add styles for clickable emails */
+    .email-column {
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border: 3px solid #ddd;
+      border-radius: 5px;
+      position: relative;
+      margin-bottom: 15px;
+    }
+    .email-column:hover {
+      background-color: #f5f5f5;
+      border-color: #aaa;
+    }
+    .selected-email {
+      border-color: #2563eb;
+      background-color: #eff6ff;
+      box-shadow: 0 0 15px rgba(37, 99, 235, 0.5);
+      transform: translateY(-3px);
+    }
+    /* Style for PDF container */
+    .pdf-container {
+      transition: all 0.3s ease;
+    }
+    /* Email header styling */
+    .email-header {
+      position: relative;
+      background-color: #f1f5f9;
+      padding: 10px 15px;
+      border-bottom: 1px solid #ddd;
+      font-weight: bold;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .selected-email .email-header {
+      background-color: #2563eb;
+      color: white;
+    }
+    /* Selection indicator */
+    .selection-indicator {
+      background-color: #10b981;
+      color: white;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: bold;
+      margin-left: 10px;
+      display: inline-block;
+    }
+    /* Improve radio option styling */
+    .radio-group {
+      display: flex;
+      gap: 20px;
+      margin: 20px 0;
+    }
+    .radio-option {
+      padding: 12px 20px;
+      border: 3px solid #ddd;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      background-color: #f9fafb;
+    }
+    .radio-option:hover {
+      border-color: #bbb;
+      background-color: #f1f5f9;
+    }
+    .radio-option.selected {
+      border-color: #2563eb;
+      background-color: #eff6ff;
+      box-shadow: 0 0 10px rgba(37, 99, 235, 0.3);
+    }
+    .radio-option input {
+      margin-right: 10px;
+    }
+    /* Improve selection area */
+    .selection-area {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      margin-top: 20px;
+    }
+    .selection-area h3 {
+      color: #1e40af;
+      margin-top: 0;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    button[type="submit"] {
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      padding: 12px 25px;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+      margin-top: 15px;
+    }
+    button[type="submit"]:hover {
+      background-color: #1d4ed8;
+    }
+    textarea {
+      width: 100%;
+      min-height: 100px;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-family: inherit;
+      font-size: 16px;
     }
   </style>
 </head>
@@ -80,13 +374,13 @@ document.addEventListener('DOMContentLoaded', function() {
       </div>
 
       <div class="email-pair">
-        <div class="email-column">
+        <div class="email-column" data-side="left" onclick="selectEmail('left')">
           <div class="email-header">Email 1</div>
           <div class="email-content">
             {{ email_left|safe }}
           </div>
         </div>
-        <div class="email-column">
+        <div class="email-column" data-side="right" onclick="selectEmail('right')">
           <div class="email-header">Email 2</div>
           <div class="email-content">
             {{ email_right|safe }}
@@ -113,20 +407,6 @@ document.addEventListener('DOMContentLoaded', function() {
             </label>
           </div>
 
-          <script>
-            // Add this after your existing script
-            document.querySelectorAll('.radio-option').forEach(option => {
-              option.addEventListener('click', function() {
-                // Remove selected class from all options
-                document.querySelectorAll('.radio-option').forEach(opt => {
-                  opt.classList.remove('selected');
-                });
-                // Add selected class to clicked option
-                this.classList.add('selected');
-              });
-            });
-          </script>
-
           <h3>Please explain your reasoning (optional):</h3>
           <textarea name="explanation"></textarea>
 
@@ -136,7 +416,8 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
     <div class="character-info" id="characterInfo">
       <h2>Character Information</h2>
-      <input type="text" id="searchInput" onkeyup="searchCharacterInfo()" placeholder="Search for words..">
+      <input type="text" id="searchInput" onkeyup="searchCharacterInfo()" placeholder="Search for information (e.g., 'projects', 'education', 'Munich')">
+
       <h3>Company Profile: Core KG</h3>
       <p><strong>Company Overview:</strong> Core KG is a mid-sized German tech company founded in 2015, specializing in enterprise cloud solutions and digital transformation services. Headquartered in Berlin with offices in Munich and Hamburg, the company employs approximately 250 people across Germany.</p>
       <p><strong>Core Business Areas:</strong></p>
@@ -148,26 +429,66 @@ document.addEventListener('DOMContentLoaded', function() {
         <li>Healthcare technology integration</li>
       </ul>
       <p><strong>Company Culture:</strong> Core prides itself on a collaborative work environment with flexible working arrangements, regular innovation workshops, and a strong commitment to work-life balance. The company has been recognized as one of "Germany's Best Employers for Work-Life Balance" for three consecutive years.</p>
-      <h3>Complete Profile Cards (For Study Participants)</h3>
-      <h4>John Doe - HR Benefits Specialist</h4>
-      <p><strong>Personal Background</strong></p>
+
+      <h3>JOHN DOE - HR BENEFITS SPECIALIST</h3>
+
+      <h4>PERSONAL BACKGROUND</h4>
       <ul>
-        <li>Age: 41</li>
-        <li>Location: Munich, Germany (Schwabing district)</li>
-        <li>Education: Bachelor in Human Resource Management, Ludwig-Maximilians-Universität München (2005); HR Management Certificate, IHK München (2007)</li>
-        <li>Family: Divorced, two children (Lukas, 12 and Sophie, 9, shared custody)</li>
-        <li>Hobbies: Marathon running (completed Berlin Marathon 2022), cooking Mediterranean cuisine, volunteering at local food bank, amateur photography</li>
+        <li><strong>Age:</strong> 41</li>
+        <li><strong>Location:</strong> Munich, Germany (Schwabing district)</li>
+        <li><strong>Education:</strong>
+          <ul>
+            <li>Bachelor in Human Resource Management, Ludwig-Maximilians-Universität München (2005)</li>
+            <li>HR Management Certificate, IHK München (2007)</li>
+          </ul>
+        </li>
+        <li><strong>Family:</strong> Divorced, two children (Lukas, 12 and Sophie, 9, shared custody)</li>
+        <li><strong>Hobbies:</strong>
+          <ul>
+            <li>Marathon running (completed Berlin Marathon 2022)</li>
+            <li>Cooking Mediterranean cuisine</li>
+            <li>Volunteering at local food bank</li>
+            <li>Amateur photography</li>
+          </ul>
+        </li>
       </ul>
-      <p><strong>Professional Details</strong></p>
+
+      <h4>PROFESSIONAL DETAILS</h4>
       <ul>
-        <li>Current Position: Senior Benefits Coordinator at Core KG, Munich office (since 2019)</li>
-        <li>Department Size: Team of 5 HR specialists (3 in Munich, 2 in Berlin)</li>
-        <li>Focus Areas: Health benefits, retirement plans, wellness programs, work-life balance initiatives, employee assistance programs</li>
-        <li>Previous Experience: 8 years at AOK as Benefits Analyst, 3 years at Siemens as HR Assistant</li>
-        <li>Certifications: PHR (Professional in Human Resources), CEBS (Certified Employee Benefit Specialist), Mental Health First Aid Certification</li>
-        <li>Languages: German (native), English (proficient), Italian (conversational)</li>
+        <li><strong>Current Position:</strong> Senior Benefits Coordinator at Core KG, Munich office (since 2019)</li>
+        <li><strong>Department Size:</strong> Team of 5 HR specialists (3 in Munich, 2 in Berlin)</li>
+        <li><strong>Focus Areas:</strong>
+          <ul>
+            <li>Health benefits</li>
+            <li>Retirement plans</li>
+            <li>Wellness programs</li>
+            <li>Work-life balance initiatives</li>
+            <li>Employee assistance programs</li>
+          </ul>
+        </li>
+        <li><strong>Previous Experience:</strong>
+          <ul>
+            <li>8 years at AOK as Benefits Analyst</li>
+            <li>3 years at Siemens as HR Assistant</li>
+          </ul>
+        </li>
+        <li><strong>Certifications:</strong>
+          <ul>
+            <li>PHR (Professional in Human Resources)</li>
+            <li>CEBS (Certified Employee Benefit Specialist)</li>
+            <li>Mental Health First Aid Certification</li>
+          </ul>
+        </li>
+        <li><strong>Languages:</strong>
+          <ul>
+            <li>German (native)</li>
+            <li>English (proficient)</li>
+            <li>Italian (conversational)</li>
+          </ul>
+        </li>
       </ul>
-      <p><strong>Current Projects</strong></p>
+
+      <h4>CURRENT PROJECTS</h4>
       <ul>
         <li>Implementing new mental health support program (MindWell Initiative with company MindBetterZ)</li>
         <li>Coordinating annual benefits enrollment (deadline: November 15)</li>
@@ -176,7 +497,17 @@ document.addEventListener('DOMContentLoaded', function() {
         <li>Organizing monthly wellness workshops (Internal Project name: Zen Cycle)</li>
         <li>Negotiating improved family support benefits with providers</li>
       </ul>
-      <p><strong>Professional Goals</strong></p>
+
+      <h4>PERSONAL CONNECTIONS</h4>
+      <ul>
+        <li><strong>Lisa Wagner:</strong> HR Manager at Core KG; close collaborator on wellness programs and benefits enrollment</li>
+        <li><strong>Michael Schneider:</strong> Senior HR Consultant at Deloitte; university classmate</li>
+        <li><strong>Sophie Becker:</strong> Talent Acquisition Specialist at Siemens; former colleague</li>
+        <li><strong>Anna Müller:</strong> Regional Sales Manager at MindBetterZ; collaborator on workplace mental health</li>
+        <li><strong>Thomas Fischer:</strong> Director of Employee Wellness at Allianz; regular contact for corporate health management</li>
+      </ul>
+
+      <h4>PROFESSIONAL GOALS</h4>
       <ul>
         <li>Complete Advanced HR Analytics certification by year-end</li>
         <li>Expand mental health resources for remote employees</li>
@@ -185,5 +516,43 @@ document.addEventListener('DOMContentLoaded', function() {
       </ul>
     </div>
   </div>
+
+  <script>
+    // Replace the overlays on PDF objects to make them properly clickable
+    document.addEventListener('DOMContentLoaded', function() {
+      // For each PDF container
+      document.querySelectorAll('.pdf-container').forEach(container => {
+        const overlay = container.querySelector('div[style*="position: absolute"]');
+
+        // Get the side (left or right) by traversing up to the email-column
+        let parentColumn = container.closest('.email-column');
+        if (parentColumn) {
+          const side = parentColumn.getAttribute('data-side');
+
+          if (overlay && side) {
+            // Make the overlay trigger the selection
+            overlay.onclick = function(e) {
+              e.stopPropagation(); // Prevent double-triggering via parent
+              selectEmail(side);
+            };
+          }
+        }
+      });
+
+      // Handle radio button clicks
+      document.querySelectorAll('.radio-option').forEach(option => {
+        option.addEventListener('click', function(e) {
+          // Stop propagation to prevent conflicts with the new click behavior
+          e.stopPropagation();
+
+          // Get the value of the radio button
+          const value = this.querySelector('input[type="radio"]').value;
+
+          // Use the same selection function for consistency
+          selectEmail(value);
+        });
+      });
+    });
+  </script>
 </body>
 </html>
