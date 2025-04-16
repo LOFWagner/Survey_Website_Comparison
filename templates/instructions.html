@@ -379,52 +379,41 @@
   <div class="container">
     <div class="main-content">
       <div class="selection-area">
-        <h2>Instructions</h2>
-        <p>Welcome to our Email Trustworthiness Survey! In this study, you will:</p>
-        <ol>
-          <li>View 10 pairs of emails displayed side-by-side</li>
-          <li><strong>Select which email you find more suspicious by clicking directly on the email itself</strong> or using the radio buttons below</li>
-          <li>Complete all comparisons at your own pace</li>
-        </ol>
+  <h2>Instructions</h2>
+  <p>You are stepping into the role of <strong>John Doe</strong>, a Senior Benefits Coordinator at Core KG. In this study, you will:</p>
+  <ol>
+    <li>Review 10 pairs of emails sent to John Doe by various individuals.</li>
+    <li><strong>Evaluate which email you find more trustworthy</strong> by clicking directly on the email itself or using the radio buttons below.</li>
+    <li>Complete all comparisons at your own pace.</li>
+  </ol>
 
-        <div class="feature-hint">
-          <strong>Quick Tip:</strong> You can click anywhere on an email (including PDFs) to select it. The selected email will be highlighted and the page will automatically scroll to the question section.
+  <div class="feature-hint">
+    <strong>Quick Tip:</strong> You can click anywhere on an email (including PDFs) to select it. The selected email will be highlighted, and the page will automatically scroll to the question section.
 
-          <div class="clickable-demo">
-            <div class="demo-email">Email content...</div>
-            <div class="demo-arrow">→</div>
-            <div class="demo-selected">Email content...</div>
-          </div>
-        </div>
+    <div class="clickable-demo">
+      <div class="demo-email">Email content...</div>
+      <div class="demo-arrow">→</div>
+      <div class="demo-selected">Email content...</div>
+    </div>
+  </div>
 
-        <p>Before starting, please familiarize yourself with the character profile below. This context will help you evaluate the emails.</p>
-        <p class="hint">Tip: Use the search box to quickly find specific information about John Doe or Core KG.</p>
+  <p>Before starting, please familiarize yourself with the character profile of John Doe below. This context will help you evaluate the emails effectively.</p>
+  <p class="hint">Tip: Use the search box to quickly find specific information about John Doe or Core KG.</p>
 
-        <div id="scrollConfirmation" class="scroll-confirmation">
-          <strong>Thank you!</strong> You've reviewed the character information. You can now start the survey.
-        </div>
+  <div id="scrollConfirmation" class="scroll-confirmation">
+    <strong>Thank you!</strong> You've reviewed the character information. You can now start the survey.
+  </div>
 
-        <form action="{{ url_for('survey') }}" method="get">
-          <button type="submit" id="startSurveyButton" class="button-disabled">Start Survey</button>
-        </form>
-      </div>
+  <form action="{{ url_for('survey') }}" method="get">
+    <button type="submit" id="startSurveyButton" class="button-disabled">Start Survey</button>
+  </form>
+</div>
     </div>
     <div class="character-info" id="characterInfo">
       <h2>Character Information</h2>
       <input type="text" id="searchInput" onkeyup="searchCharacterInfo()" placeholder="Search for information (e.g., 'projects', 'education', 'Munich')">
 
-      <h3>Company Profile: Core KG</h3>
-      <p><strong>Company Overview:</strong> Core KG is a mid-sized German tech company founded in 2015, specializing in enterprise cloud solutions and digital transformation services. Headquartered in Berlin with offices in Munich and Hamburg, the company employs approximately 250 people across Germany.</p>
-      <p><strong>Core Business Areas:</strong></p>
-      <ul>
-        <li>Cloud infrastructure optimization</li>
-        <li>Custom enterprise software development</li>
-        <li>Digital workplace solutions</li>
-        <li>Cybersecurity consulting</li>
-        <li>Healthcare technology integration</li>
-      </ul>
-      <p><strong>Company Culture:</strong> Core prides itself on a collaborative work environment with flexible working arrangements, regular innovation workshops, and a strong commitment to work-life balance. The company has been recognized as one of "Germany's Best Employers for Work-Life Balance" for three consecutive years.</p>
-
+      <p><strong>Company Overview:</strong> Core KG, founded in 2015, is a mid-sized German tech company specializing in cloud infrastructure, enterprise software, digital workplace solutions, cybersecurity, and healthcare technology integration.</p>
       <h3>JOHN DOE - HR BENEFITS SPECIALIST</h3>
 
       <h4>PERSONAL BACKGROUND</h4>
