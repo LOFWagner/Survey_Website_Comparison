@@ -5,6 +5,19 @@
   <title>Demographics</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    .explanation-box {
+      border: 2px solid #5cb85c;
+      border-radius: 5px;
+      padding: 15px;
+      margin: 20px 0;
+      background-color: #f9f9f9;
+    }
+    .explanation-box h3 {
+      margin-top: 0;
+      color: #5cb85c;
+    }
+  </style>
 </head>
 <body>
   <header>
@@ -13,6 +26,12 @@
   <div class="demographics-container">
     <div class="selection-area">
       <h2>Demographics</h2>
+      <div class="explanation-box">
+        <h3>Technical Proficiency Levels</h3>
+        <p><strong>Beginner:</strong> You have little to no experience with technology or programming. You may be unfamiliar with technical terms and require step-by-step guidance to complete tasks.</p>
+        <p><strong>Intermediate:</strong> You have some experience with technology or programming. You can perform common tasks, understand basic concepts, and troubleshoot minor issues independently.</p>
+        <p><strong>Advanced:</strong> You have extensive experience with technology or programming. You can solve complex problems, understand advanced concepts, and work independently on technical projects.</p>
+      </div>
       <form action="{{ url_for('demographics') }}" method="post">
         <div class="form-group">
           <label for="age">Age Range:</label>
@@ -27,14 +46,14 @@
           </select>
         </div>
         <div class="form-group">
-  <label for="experience">Technical Experience:</label>
-  <select name="experience" id="experience" required>
-    <option value="" disabled selected>Select your level</option>
-    <option value="beginner">Beginner</option>
-    <option value="intermediate">Intermediate</option>
-    <option value="advanced">Advanced</option>
-  </select>
-</div>
+          <label for="experience">Technical Experience:</label>
+          <select name="experience" id="experience" required>
+            <option value="" disabled selected>Select your level</option>
+            <option value="beginner">Beginner</option>
+            <option value="intermediate">Intermediate</option>
+            <option value="advanced">Advanced</option>
+          </select>
+        </div>
         <button type="submit">Continue</button>
       </form>
     </div>
