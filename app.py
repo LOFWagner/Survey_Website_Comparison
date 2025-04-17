@@ -139,24 +139,55 @@ def get_email_content(filename):
 def serve_email_file(filename):
     return send_from_directory(EMAILS_DIR, filename)
 
+
 def generate_random_pairs():
     # Load email files
-    emails = load_email_files()
+    all_emails = load_email_files()
 
-    # Check if we have enough unique emails
-    if len(emails) < 2:
-        raise ValueError("Not enough unique email files to create pairs")
+    # Separate emails by type
+    ai_emails = [e for e in all_emails if e.startswith('ai_')]
+    phish_emails = [e for e in all_emails if e.startswith('phish_')]
+    regular_emails = [e for e in all_emails if e.startswith('regular_')]
+
+    # Check if we have enough emails of each type
+    if not (ai_emails and phish_emails):
+        raise ValueError("Not enough AI and phishing email files to create biased pairs")
 
     pairs = []
     used_pairs = set()  # Keep track of pairs we've already used
 
+    # Calculate how many pairs of each type to generate
+    ai_vs_phish_count = int(NUM_PAIRS * 0.6)
+    other_pairs_count = NUM_PAIRS - ai_vs_phish_count
+
+    # Generate AI vs phishing pairs (60%)
+    while len(pairs) < ai_vs_phish_count:
+        ai_email = random.choice(ai_emails)
+        phish_email = random.choice(phish_emails)
+
+        # Randomly determine order
+        if random.choice([True, False]):
+            pair = (ai_email, phish_email)
+        else:
+            pair = (phish_email, ai_email)
+
+        if pair not in used_pairs and tuple(reversed(pair)) not in used_pairs:
+            pairs.append(list(pair))
+            used_pairs.add(pair)
+
+    # Generate remaining pairs (40% - either ai vs ai or phish vs phish)
     while len(pairs) < NUM_PAIRS:
-        # Randomly select two distinct emails from the list
-        pair = random.sample(emails, 2)
+        # Randomly choose between ai-ai and phish-phish pairs
+        if random.choice([True, False]) and len(ai_emails) >= 2:
+            # AI vs AI
+            pair = random.sample(ai_emails, 2)
+        else:
+            # Phish vs Phish
+            pair = random.sample(phish_emails, 2)
+
         pair_tuple = tuple(pair)
         reverse_pair = tuple(reversed(pair))
 
-        # Ensure we haven't used this pair before (in either order)
         if pair_tuple not in used_pairs and reverse_pair not in used_pairs:
             pairs.append(pair)
             used_pairs.add(pair_tuple)
