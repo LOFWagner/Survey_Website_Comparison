@@ -14,6 +14,121 @@
       return true;
     }
 
+    // Search functionality for character info
+    function searchCharacterInfo() {
+      const input = document.getElementById('searchInput').value.toLowerCase().trim();
+      const info = document.getElementById('characterInfo');
+
+      // If search is empty, show everything
+      if (input === '') {
+        info.querySelectorAll('h2, h3, h4, p, ul, li').forEach(el => {
+          el.style.display = '';
+        });
+        return;
+      }
+
+      // Hide all elements
+      info.querySelectorAll('h2, h3, h4, p, ul, li').forEach(el => {
+        el.style.display = 'none';
+      });
+
+      // Always show the main header and search input
+      document.getElementById('searchInput').style.display = '';
+      info.querySelector('h2').style.display = '';
+
+      // Find all matching headers first
+      const matchingHeaders = Array.from(info.querySelectorAll('h3, h4')).filter(header =>
+        header.textContent.toLowerCase().includes(input)
+      );
+
+      // Find all elements containing the search input
+      const matchingElements = Array.from(info.querySelectorAll('p, li')).filter(el =>
+        el.textContent.toLowerCase().includes(input)
+      );
+
+      // Show matching headers and ALL their content
+      matchingHeaders.forEach(header => {
+        header.style.display = '';
+        const currentLevel = parseInt(header.tagName.charAt(1));
+        let nextEl = header.nextElementSibling;
+        while (nextEl &&
+               !(nextEl.tagName === 'H3' ||
+                 (nextEl.tagName === 'H4' && currentLevel === 4))) {
+          nextEl.style.display = '';
+          if (nextEl.children) {
+            Array.from(nextEl.children).forEach(child => {
+              child.style.display = '';
+              if (child.tagName === 'UL' || child.tagName === 'OL') {
+                child.querySelectorAll('li').forEach(li => {
+                  li.style.display = '';
+                });
+              }
+            });
+          }
+          nextEl = nextEl.nextElementSibling;
+        }
+        if (header.tagName === 'H4') {
+          let prevEl = header.previousElementSibling;
+          while (prevEl) {
+            if (prevEl.tagName === 'H3') {
+              prevEl.style.display = '';
+              break;
+            }
+            prevEl = prevEl.previousElementSibling;
+          }
+        }
+      });
+
+      // For each matching text element, make it and its context visible
+      matchingElements.forEach(el => {
+        el.style.display = '';
+        let parent = el.parentElement;
+        while (parent && parent !== info) {
+          parent.style.display = '';
+          if (parent.tagName === 'UL' || parent.tagName === 'OL') {
+            parent.querySelectorAll('li').forEach(li => {
+              li.style.display = '';
+            });
+          }
+          parent = parent.parentElement;
+        }
+        let currentEl = el;
+        while (currentEl && currentEl !== info) {
+          let header = null;
+          let sibling = currentEl.previousElementSibling;
+          while (sibling && !header) {
+            if (['H3', 'H4'].includes(sibling.tagName)) {
+              header = sibling;
+              header.style.display = '';
+              if (header.tagName === 'H4') {
+                let prevEl = header.previousElementSibling;
+                while (prevEl) {
+                  if (prevEl.tagName === 'H3') {
+                    prevEl.style.display = '';
+                    break;
+                  }
+                  prevEl = prevEl.previousElementSibling;
+                }
+              }
+              break;
+            }
+            sibling = sibling.previousElementSibling;
+          }
+          if (header) break;
+          currentEl = currentEl.parentElement;
+        }
+      });
+
+      // Final pass to ensure all list items within visible lists are shown
+      info.querySelectorAll('ul, ol').forEach(list => {
+        if (list.style.display !== 'none') {
+          list.querySelectorAll('li').forEach(li => {
+            li.style.display = '';
+          });
+        }
+      });
+    }
+
     // Function to select an email when clicked
     function selectEmail(side) {
       document.querySelector(`input[name="selected_email"][value="${side}"]`).checked = true;
@@ -55,6 +170,17 @@
         });
       }, 100);
     }
+
+    // Handle radio button clicks for selection highlight
+    document.addEventListener('DOMContentLoaded', function() {
+      document.querySelectorAll('.radio-option').forEach(option => {
+        option.addEventListener('click', function(e) {
+          e.stopPropagation();
+          const value = this.querySelector('input[type="radio"]').value;
+          selectEmail(value);
+        });
+      });
+    });
   </script>
   <style>
     .container {
@@ -62,6 +188,45 @@
     }
     .main-content {
       flex: 3;
+    }
+    .character-info {
+  flex: 3;
+  margin-left: 20px;
+  border: 1px solid #ccc;
+  padding: 10px;
+  background-color: #f9f9f9;
+  border-radius: 5px;
+  max-width: none; /* Removed or overwritten */
+  min-width: 250px;
+  height: fit-content;
+  align-self: flex-start;
+}
+    #searchInput {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+    .character-info h2 {
+      color: #2c3e50;
+      border-bottom: 2px solid #3498db;
+      padding-bottom: 5px;
+    }
+    .character-info h3 {
+      color: #2980b9;
+      margin-top: 20px;
+    }
+    .character-info h4 {
+      color: #16a085;
+      margin-top: 15px;
+    }
+    .character-info ul {
+      margin-top: 10px;
+    }
+    .character-info li {
+      margin-bottom: 5px;
     }
     .task-box {
       background-color: #f1f9fe;
@@ -189,11 +354,11 @@
   <div class="container">
     <div class="main-content">
       <div class="task-box">
-  <h2>Task Overview</h2>
-  <p><strong style="color: red;">You are John Doe</strong>, a Senior Benefits Coordinator at Core KG. Your character card is visible below for reference.</p>
-  <p>Use the <strong>search box</strong> to quickly find information about <strong style="color: red;">known friends by name</strong>, or search for a <strong style="color: red;">project</strong> or <strong style="color: red;">familiar company</strong> to assist in your evaluation.</p>
-  <p><strong style="color: blue; font-size: 18px;">Your task: Select the more trustworthy email</strong></p>
-</div>
+        <h2>Task Overview</h2>
+        <p><strong style="color: red;">You are John Doe</strong>, a Senior Benefits Coordinator at Core KG. Your character card is visible below for reference.</p>
+        <p>Use the <strong>search box</strong> to quickly find information about <strong style="color: red;">known friends by name</strong>, or search for a <strong style="color: red;">project</strong> or <strong style="color: red;">familiar company</strong> to assist in your evaluation.</p>
+        <p><strong style="color: blue; font-size: 18px;">Your task: Select the more trustworthy email</strong></p>
+      </div>
 
       <div class="progress">
         <span>Progress:</span>
@@ -243,6 +408,108 @@
           <button type="submit">Continue</button>
         </form>
       </div>
+    </div>
+    <!-- Character Card and Search Sidebar -->
+    <div class="character-info" id="characterInfo">
+      <h2>Character Information</h2>
+      <input type="text" id="searchInput" onkeyup="searchCharacterInfo()" placeholder="Search for information (e.g., 'projects', 'education', 'Munich')">
+
+      <h3>Company Profile: Core KG</h3>
+      <p><strong>Company Overview:</strong> Core KG is a mid-sized German tech company founded in 2015, specializing in enterprise cloud solutions and digital transformation services. Headquartered in Berlin with offices in Munich and Hamburg, the company employs approximately 250 people across Germany.</p>
+      <p><strong>Core Business Areas:</strong></p>
+      <ul>
+        <li>Cloud infrastructure optimization</li>
+        <li>Custom enterprise software development</li>
+        <li>Digital workplace solutions</li>
+        <li>Cybersecurity consulting</li>
+        <li>Healthcare technology integration</li>
+      </ul>
+      <p><strong>Company Culture:</strong> Core prides itself on a collaborative work environment with flexible working arrangements, regular innovation workshops, and a strong commitment to work-life balance. The company has been recognized as one of "Germany's Best Employers for Work-Life Balance" for three consecutive years.</p>
+
+      <h3>JOHN DOE - HR BENEFITS SPECIALIST</h3>
+
+      <h4>PERSONAL BACKGROUND</h4>
+      <ul>
+        <li><strong>Age:</strong> 41</li>
+        <li><strong>Location:</strong> Munich, Germany (Schwabing district)</li>
+        <li><strong>Education:</strong>
+          <ul>
+            <li>Bachelor in Human Resource Management, Ludwig-Maximilians-Universität München (2005)</li>
+            <li>HR Management Certificate, IHK München (2007)</li>
+          </ul>
+        </li>
+        <li><strong>Family:</strong> Divorced, two children (Lukas, 12 and Sophie, 9, shared custody)</li>
+        <li><strong>Hobbies:</strong>
+          <ul>
+            <li>Marathon running (completed Berlin Marathon 2022)</li>
+            <li>Cooking Mediterranean cuisine</li>
+            <li>Volunteering at local food bank</li>
+            <li>Amateur photography</li>
+          </ul>
+        </li>
+      </ul>
+
+      <h4>PROFESSIONAL DETAILS</h4>
+      <ul>
+        <li><strong>Current Position:</strong> Senior Benefits Coordinator at Core KG, Munich office (since 2019)</li>
+        <li><strong>Department Size:</strong> Team of 5 HR specialists (3 in Munich, 2 in Berlin)</li>
+        <li><strong>Focus Areas:</strong>
+          <ul>
+            <li>Health benefits</li>
+            <li>Retirement plans</li>
+            <li>Wellness programs</li>
+            <li>Work-life balance initiatives</li>
+            <li>Employee assistance programs</li>
+          </ul>
+        </li>
+        <li><strong>Previous Experience:</strong>
+          <ul>
+            <li>8 years at AOK as Benefits Analyst</li>
+            <li>3 years at Siemens as HR Assistant</li>
+          </ul>
+        </li>
+        <li><strong>Certifications:</strong>
+          <ul>
+            <li>PHR (Professional in Human Resources)</li>
+            <li>CEBS (Certified Employee Benefit Specialist)</li>
+            <li>Mental Health First Aid Certification</li>
+          </ul>
+        </li>
+        <li><strong>Languages:</strong>
+          <ul>
+            <li>German (native)</li>
+            <li>English (proficient)</li>
+            <li>Italian (conversational)</li>
+          </ul>
+        </li>
+      </ul>
+
+      <h4>CURRENT PROJECTS</h4>
+      <ul>
+        <li>Implementing new mental health support program (MindWell Initiative with company MindBetterZ)</li>
+        <li>Coordinating annual benefits enrollment (deadline: November 15)</li>
+        <li>Developing employee wellness initiatives including fitness subsidies (Project name: WellSpring)</li>
+        <li>Creating comprehensive benefits information materials in both German and English</li>
+        <li>Organizing monthly wellness workshops (Internal Project name: Zen Cycle)</li>
+        <li>Negotiating improved family support benefits with providers</li>
+      </ul>
+
+      <h4>PERSONAL CONNECTIONS</h4>
+      <ul>
+        <li><strong>Lisa Wagner:</strong> HR Manager at Core KG; close collaborator on wellness programs and benefits enrollment</li>
+        <li><strong>Michael Schneider:</strong> Senior HR Consultant at Deloitte; university classmate</li>
+        <li><strong>Sophie Becker:</strong> Talent Acquisition Specialist at Siemens; former colleague</li>
+        <li><strong>Anna Müller:</strong> Regional Sales Manager at MindBetterZ; collaborator on workplace mental health</li>
+        <li><strong>Thomas Fischer:</strong> Director of Employee Wellness at Allianz; regular contact for corporate health management</li>
+      </ul>
+
+      <h4>PROFESSIONAL GOALS</h4>
+      <ul>
+        <li>Complete Advanced HR Analytics certification by year-end</li>
+        <li>Expand mental health resources for remote employees</li>
+        <li>Improve benefits enrollment participation by 15%</li>
+        <li>Develop comprehensive onboarding benefits package for new hires</li>
+      </ul>
     </div>
   </div>
 </body>
