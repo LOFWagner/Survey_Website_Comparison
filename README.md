@@ -70,13 +70,11 @@ The application records:
 - Email pair information (filenames)
 - Which email was selected as more trustworthy
 - Optional explanations
-- Time taken to make each decision
 
 ## Research Purpose
 
 This tool is designed to investigate how effectively humans can distinguish between:
-- Legitimate emails
-- Traditional phishing emails
+- Traditional phishing emails (Automated adjustments)
 - AI-generated malicious content
 
 The collected data helps analyze vulnerability patterns and can inform better security awareness training.
